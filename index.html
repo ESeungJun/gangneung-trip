@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>강릉 2박 3일 · 9.19–9.21</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  :root {
+    --bg: #f2f5f5;
+    --surface: #ffffff;
+    --ink: #1a2b2f;
+    --ink-soft: #5b6f72;
+    --line: #dde5e5;
+    --accent: #0e6b72;
+    --accent-ink: #ffffff;
+    --accent-soft: #e3efef;
+    --sand: #b08d4f;
+    --sand-soft: #f4ecdd;
+    --warn: #a35b2c;
+    --warn-soft: #f6e9de;
+    --d1: #0e6b72;
+    --d2: #b08d4f;
+    --d3: #7a5c9e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1719;
+      --surface: #162225;
+      --ink: #e2ecec;
+      --ink-soft: #8fa4a6;
+      --line: #24363a;
+      --accent: #4db3ba;
+      --accent-ink: #06282b;
+      --accent-soft: #14343a;
+      --sand: #cfa96a;
+      --sand-soft: #2e2818;
+      --warn: #d99a6a;
+      --warn-soft: #33241a;
+      --d1: #4db3ba;
+      --d2: #cfa96a;
+      --d3: #a98fd0;
+    }
+    .leaflet-tile { filter: brightness(0.7) contrast(1.05) saturate(0.7); }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 20px 64px; }
+
+  header { padding: 32px 0 20px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 8px;
+  }
+  h1 { font-size: 32px; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.02em; font-weight: 800; }
+  .trip-meta { color: var(--ink-soft); font-size: 15px; margin: 0; }
+  .dday {
+    display: inline-block; margin-top: 12px;
+    background: var(--accent); color: var(--accent-ink);
+    font-weight: 700; font-size: 13px; letter-spacing: 0.04em;
+    padding: 5px 12px; border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  h2.sec {
+    font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 700;
+    margin: 44px 0 12px; padding-top: 24px; border-top: 1px solid var(--line);
+  }
+
+  /* ---------- map ---------- */
+  .map-tabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .map-tab {
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft);
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  }
+  .map-tab.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .map-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #map { height: 46vh; min-height: 320px; border-radius: 14px; border: 1px solid var(--line); z-index: 0; }
+  .map-cap { font-size: 12.5px; color: var(--ink-soft); margin: 8px 0 8px; }
+  .map-cap b { color: var(--ink); }
+
+  .pin-label { border: none; background: transparent; }
+  .pin-label > div {
+    width: 26px; height: 26px; border-radius: 50% 50% 50% 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  }
+  .leaflet-popup-content { font-family: inherit; font-size: 13.5px; line-height: 1.5; margin: 12px 14px; }
+  .leaflet-popup-content b { font-size: 14.5px; }
+  .leaflet-popup-content a { color: #0e6b72; font-weight: 700; text-decoration: none; }
+
+  /* ---------- cards & buttons ---------- */
+  .base {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: 18px 18px 16px; margin: 28px 0 8px;
+  }
+  .base .label {
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--sand); font-weight: 700; margin-bottom: 4px;
+  }
+  .base h2 { margin: 0 0 2px; font-size: 18px; }
+  .base p { margin: 0 0 12px; color: var(--ink-soft); font-size: 14px; }
+
+  .map-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .map-btn {
+    display: inline-block; text-decoration: none;
+    font-size: 13px; font-weight: 600;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 7px 14px; border-radius: 999px; border: none; cursor: pointer; font-family: inherit;
+  }
+  .map-btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); }
+  .map-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- day sections ---------- */
+  .day { margin-bottom: 32px; }
+  .day-head {
+    display: flex; align-items: baseline; gap: 10px;
+    border-bottom: 2px solid var(--ink); padding-bottom: 8px; margin-bottom: 4px;
+  }
+  .day-head .d { font-size: 20px; font-weight: 800; }
+  .day-head .date { color: var(--ink-soft); font-size: 14px; flex: 1; }
+  .day-note { font-size: 13px; color: var(--ink-soft); margin: 6px 0 10px; }
+  .sort-btn {
+    border: 1px solid var(--line); background: var(--surface); color: var(--accent);
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    padding: 4px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  }
+
+  .stops { list-style: none; margin: 0; padding: 0; }
+  .stoprow {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 10px; margin-bottom: 6px;
+  }
+  .stoprow.fixed { background: transparent; border-style: dashed; color: var(--ink-soft); }
+  .stoprow .num {
+    width: 22px; height: 22px; border-radius: 50% 50% 50% 4px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 11px;
+  }
+  .stoprow .nm { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; }
+  .stoprow .nm small { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft); }
+  input.t {
+    width: auto; min-width: 112px; height: 32px; flex: none;
+    border: 1px solid var(--line); border-radius: 7px;
+    background: var(--bg); color: var(--ink); font-family: inherit; font-size: 13px;
+    padding: 3px 8px; text-align: center; font-variant-numeric: tabular-nums;
+  }
+  input.t::placeholder { color: var(--ink-soft); opacity: 0.6; }
+  .daycard {
+    list-style: none; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .daycard .stop-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .daycard .stop-head .num {
+    width: 24px; height: 24px; border-radius: 50% 50% 50% 4px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 12px;
+  }
+  .cardflex { display: flex; gap: 12px; align-items: flex-start; }
+  .cardflex .thumb {
+    width: 72px; height: 72px; border-radius: 9px; object-fit: cover;
+    flex: none; background: var(--bg); margin-top: 2px;
+  }
+  .daycard h3 { margin: 0 0 2px; font-size: 15.5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .daycard .desc { margin: 2px 0 8px; font-size: 13px; color: var(--ink-soft); }
+  .daycard .meta { font-size: 11.5px; color: var(--ink-soft); margin: 0 0 6px; }
+  .icon-btn {
+    border: none; background: transparent; color: var(--ink-soft);
+    font-size: 15px; cursor: pointer; padding: 3px 5px; flex: none; font-family: inherit;
+  }
+  .icon-btn:hover { color: var(--ink); }
+  .day-empty {
+    border: 1.5px dashed var(--line); border-radius: 10px;
+    padding: 14px; color: var(--ink-soft); font-size: 13px; text-align: center; margin-bottom: 6px;
+  }
+
+  /* ---------- pool ---------- */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .cat-head { font-size: 13px; font-weight: 800; color: var(--ink); margin: 20px 0 8px; }
+  .cat-head span { color: var(--ink-soft); font-weight: 600; }
+  .pcard {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 13px 14px 11px; margin-bottom: 8px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .pcard.assigned { border-color: var(--accent); }
+  .pcard .thumb {
+    width: 72px; height: 72px; border-radius: 9px; object-fit: cover;
+    flex: none; background: var(--bg); margin-top: 2px;
+  }
+  .pcard .pbody { flex: 1; min-width: 0; }
+  .pcard h3 { margin: 0 0 2px; font-size: 15.5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pcard .desc { margin: 2px 0 8px; font-size: 13px; color: var(--ink-soft); }
+  .ptip { margin: 0 0 8px; font-size: 12.5px; font-weight: 700; color: var(--warn); }
+  .ptip a { color: var(--warn); text-decoration: underline; }
+  .stoprow .nm .rowtip { color: var(--warn); font-weight: 600; }
+  .pcard .meta { font-size: 11.5px; color: var(--ink-soft); margin: 0 0 9px; }
+  .badge {
+    display: inline-block; font-size: 10.5px; font-weight: 700;
+    padding: 2px 7px; border-radius: 5px; vertical-align: 1px;
+  }
+  .badge.area-gn { background: var(--accent-soft); color: var(--accent); }
+  .badge.area-sc { background: var(--sand-soft); color: var(--sand); }
+  .badge.area-etc { background: var(--warn-soft); color: var(--warn); }
+  .badge.flag { background: var(--warn-soft); color: var(--warn); }
+  .assign { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .abtn {
+    border: 1px solid var(--line); background: transparent; color: var(--ink-soft);
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  }
+  .abtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .assign .links { margin-left: auto; display: flex; gap: 4px; }
+  .assign .links a {
+    font-size: 12px; font-weight: 600; text-decoration: none;
+    color: var(--accent); padding: 5px 7px;
+  }
+  details.subgroup { margin: 8px 0 16px; }
+  details.subgroup summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ink-soft); padding: 6px 0; }
+
+  /* ---------- tips ---------- */
+  .tip {
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 4px solid var(--sand);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; font-size: 13.5px;
+  }
+  .tip b { display: block; margin-bottom: 2px; }
+  .tip a { color: var(--accent); font-weight: 700; text-decoration: none; font-size: 12.5px; }
+  .tip .src { color: var(--ink-soft); font-size: 11.5px; }
+
+  footer { margin-top: 40px; font-size: 12.5px; color: var(--ink-soft); }
+  footer p { margin: 4px 0; }
+
+  .site-tabs {
+    position: sticky; top: 0; z-index: 900;
+    background: var(--bg); display: flex; gap: 8px;
+    padding: 10px 0 12px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .site-tabs .map-tab { flex: 1; text-align: center; padding: 9px 8px; font-size: 14px; }
+  .page { display: none; }
+  .page.on { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Gangneung &amp; Sokcho · 자차 여행</div>
+    <h1>강릉 2박 3일</h1>
+    <p class="trip-meta">2026. 9. 19 (토) — 9. 21 (월)</p>
+    <span class="dday" id="dday"></span>
+  </header>
+
+  <nav class="site-tabs" id="siteTabs"></nav>
+
+  <div class="page on" id="page-plan">
+  <div class="map-tabs" id="mapTabs"></div>
+  <div id="map"></div>
+  <p class="map-cap" id="mapCap"></p>
+  <p class="map-cap">전체 탭의 회색 점 = 아직 배치 안 한 후보. 장소 리스트에서 DAY 버튼으로 배치하면 색깔 핀으로 바뀌어요.</p>
+
+  <section class="base">
+    <div class="label">Base Camp · 2박</div>
+    <h2>신라모노그램 강릉 호텔</h2>
+    <p>강원 강릉시 해안로 186 · 송정해변 솔숲 인근, 안목 커피거리 차 5분 · 체크인 15:00</p>
+    <div class="map-btns">
+      <a class="map-btn" href="https://www.google.com/maps/search/?api=1&query=%EC%8B%A0%EB%9D%BC%EB%AA%A8%EB%85%B8%EA%B7%B8%EB%9E%A8%20%EA%B0%95%EB%A6%89%20%ED%98%B8%ED%85%94">구글 지도</a>
+      <a class="map-btn ghost" href="https://map.naver.com/p/search/%EC%8B%A0%EB%9D%BC%EB%AA%A8%EB%85%B8%EA%B7%B8%EB%9E%A8%20%EA%B0%95%EB%A6%89%20%ED%98%B8%ED%85%94">네이버 지도</a>
+    </div>
+  </section>
+
+  <h2 class="sec">추천 코스 한 번에 넣기</h2>
+  <p class="map-cap" style="margin-top:-4px">테마를 고르면 3일치 배치와 추천 시간이 통째로 들어가요 (휴무 요일 피해서 설계). 넣은 뒤 자유롭게 수정하면 됩니다.</p>
+  <div class="map-tabs" id="presets"></div>
+
+  <h2 class="sec">일정 · 순서와 시간은 자유롭게</h2>
+  <div id="days"></div>
+  </div><!-- /page-plan -->
+
+  <div class="page" id="page-list">
+  <h2 class="sec" style="border-top:none; padding-top:0; margin-top:12px">장소 리스트 · <span id="poolCount"></span></h2>
+  <div class="filters" id="filters"></div>
+  <div id="pool"></div>
+  </div><!-- /page-list -->
+
+  <div class="page" id="page-etc">
+  <h2 class="sec" style="border-top:none; padding-top:0; margin-top:12px">중앙시장 포장 치트시트</h2>
+  <p class="map-cap" style="margin-top:-4px">강릉어때(@howabout_gangwon) 카드 정리 — 품목별 어디서 살지 헤맬 때 펼쳐보세요. <a href="img/market-list.png" style="color:var(--accent);font-weight:700;text-decoration:none">원본 이미지 크게 보기 ↗</a></p>
+  <details class="subgroup">
+    <summary>품목별 포장 맛집 40여 곳 펼치기</summary>
+    <div class="tip" style="border-left-color:var(--accent)"><b>🍗 닭</b>닭다리구이 강릉장각 · 닭강정 만복래닭강정/베니닭강정 · 치킨 꼬꼬닭집 · 닭발 중앙닭발 · 염통꼬치 시나미닭염통</div>
+    <div class="tip" style="border-left-color:var(--accent)"><b>🐟 회·수산</b>회 형제횟집 회도락 · 물회 인생물회 · 대게 부자대게/대게특별시 · 오징어순대 황금오징어순대 오룽지 · 짬뽕오징어순대 강릉짬뽕오징어순대 · 초밥 민영활어공장 · 무침회 원조소문난무침회 · 젓갈 사임당젓갈</div>
+    <div class="tip" style="border-left-color:var(--accent)"><b>🥔 감자</b>컵감자·소세지감자 길감자 · 감자크로켓 치즈감옥 · 감자채와플 감자천국 · 치즈폭탄감자빵 강릉이래요</div>
+    <div class="tip" style="border-left-color:var(--accent)"><b>🍢 분식</b>떡볶이 여고시절/디델리/달떡볶이 · 김밥 초록김밥 · 짬뽕떡볶이 용춘 · 마라꼬치 월화마라꼬치 · 만두 곰돌이왕만두/박종주반죽소 · 튀김 두리튀김 · 빈대떡 영미네부침 · 후렌치후라이 브뤼셀프라이 · 고로케 수제어묵고로케</div>
+    <div class="tip" style="border-left-color:var(--accent)"><b>🥩 고기·식사</b>햄버거 대디스버거 · 떡갈비 삼초전 · 뭉티기 강릉뭉티기영양바베큐 · 족발 하슬라족발 · 김치말이삼겹살 월화강릉김치말이삼겹</div>
+    <div class="tip" style="border-left-color:var(--accent)"><b>☕ 커피·디저트</b>흑임자라떼 툇마루 · 젤라또 젤라또마켓 · 옥시기라떼 옥시기농장 · 찹쌀떡 강릉시루 · 카스테라인절미 말랑곳간 · 딸기모찌 강릉딸기모찌 · 강릉샌드 · 크레페 크레페돔 · 에그타르트 에그릿오버웨잇/옥토끼 · 약과 장인약과</div>
+    <div class="tip" style="border-left-color:var(--accent)"><b>🍞 빵</b>짬뽕빵 강릉중화짬뽕빵 · 사라다빵 바로방 · 붕어빵 오드붕어 · 호두과자 호두원호두과자 · 베이글 만동제과/강릉베이글 · 마늘바게트 팡파미유 · 통밀빵 개두류통밀빵 · 아이스크림호떡 모자호떡 · 술빵 강릉사임당술빵</div>
+    <p class="map-cap">※ 이미지 판독 기준이라 일부 상호 표기가 다를 수 있어요.</p>
+  </details>
+
+  <h2 class="sec">정보 확인 필요 (사진·영상에만 정보가 있는 링크)</h2>
+  <div id="pending"></div>
+  </div><!-- /page-etc -->
+
+  <footer>
+    <p>· 현지 팁: 강릉은 차 필수, 9월 중순도 낮엔 더울 수 있으니 양산·물 챙기기 (@1azyheart)</p>
+    <p>· 자차 동선·소요 시간은 경로 엔진(OSRM) 기준 예상치 — 실시간 교통 미반영. (구글 지도는 한국 자차 경로 미지원)</p>
+    <p>· 마커 위치는 주소 기반 근사치가 있어요. 실제 내비는 장소의 네이버/구글 링크로.</p>
+    <p>· 배치·순서·시간은 이 브라우저에 자동 저장돼요.</p>
+  </footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+/* ================================================================
+   데이터: 인스타에서 수집한 장소들. 새 장소는 PLACES에 추가.
+   area: gn(강릉) sc(속초) etc(고성·동해) / lat,lng 없으면 경로 계산에서 제외
+   ================================================================ */
+const HOTEL = { name: "신라모노그램 강릉 호텔", g: "신라모노그램 강릉 호텔", lat: 37.7848, lng: 128.9252 };
+
+const PLACES = [
+  /* ---- 강릉 · 맛집 ---- */
+  { id:"solol", name:"강릉시립미술관 솔올", area:"gn", cat:"공간·전시",
+    desc:"《화가 김종학》 특별전(~10/25) — 드로잉 400여 점. 10:00–18:00, 월요일 휴관이라 토·일에 가야 해요.",
+    addr:"원대로 45", g:"강릉시립미술관 솔올", lat:37.7645, lng:128.8805, src:"@space_yuram", insta:"https://www.instagram.com/p/DbsbNbSIFG5/" },
+  { id:"goraeseom", name:"고래섬", area:"gn", cat:"맛집",
+    desc:"화덕 생선구이 + 고슬고슬 솥밥 정식 12,000원. 강릉 19년 산 현지인의 최애 1위.",
+    addr:"임영로25번길 35", g:"강릉 고래섬", lat:37.7521, lng:128.8934, src:"@one.leisurely", insta:"https://www.instagram.com/reel/DYW9DSqBt-P/" },
+  { id:"geumhak", name:"금학칼국수", area:"gn", cat:"맛집",
+    desc:"골목길 장칼국수 노포, 블루리본 다수. 장칼국수+콩나물밥 조합. 웨이팅 필수.",
+    addr:"대학길 12-6", g:"강릉 금학칼국수", lat:37.7562, lng:128.8972, approx:true, src:"@one.leisurely", insta:"https://www.instagram.com/reel/DYW9DSqBt-P/" },
+  { id:"yetcanaria", name:"옛카나리아", area:"gn", cat:"맛집",
+    desc:"콩나물 산더미 아래 대구·두부·떡이 가득한 대구머리찜. 성산면(대관령 방향)이라 서울 오가는 길 동선에 딱.",
+    addr:"성산면 구산길 74", g:"강릉 옛카나리아", lat:37.7270, lng:128.8330, approx:true, src:"@one.leisurely", insta:"https://www.instagram.com/reel/DYW9DSqBt-P/" },
+  { id:"pongnam", name:"포남사골옹심이", area:"gn", cat:"맛집",
+    desc:"진한 사골 베이스 감자옹심이. 순옹심이·옹심이칼국수, 감자송편도 필수.",
+    addr:"남구길10번길 11", g:"포남사골옹심이", lat:37.7635, lng:128.9040, approx:true, src:"@one.leisurely", insta:"https://www.instagram.com/reel/DYW9DSqBt-P/" },
+  { id:"solbaram", name:"솔바람감자적", area:"gn", cat:"맛집",
+    desc:"30년 강판으로 간 감자전 + 바로바로 쪄주는 쫄깃 감자떡. 병산 옹심이골목, 주차 넓음. 호텔에서 차 10분!",
+    addr:"공항길 39-6", g:"솔바람감자적", lat:37.7470, lng:128.9220, approx:true, src:"@foodie_in_the_closet", insta:"https://www.instagram.com/p/Daxm6GNASuw/" },
+  { id:"sagye", name:"사계절탕수육", area:"gn", cat:"맛집",
+    desc:"감자크림탕수육(감크탕)이 시그니처 — 김피탕은 호불호. 메뉴 30가지. 네이버 예약 추천.",
+    addr:"범일로579번길 6", g:"강릉 사계절탕수육", lat:37.7600, lng:128.8890, approx:true, src:"@meogbo_family", insta:"https://www.instagram.com/reel/DWyp_gFD-1r/" },
+  { id:"wingwing", name:"윙윙치킨", area:"gn", cat:"맛집",
+    desc:"닭껍질튀김(소) 5,000원 — 뚜껑 안 닫힐 만큼 수북, 식어도 맛있어 숙소 2차 안주 최적.",
+    tip:"미리 전화 주문해두고 픽업 — 17시 오픈이라 저녁 호텔 들어가는 길에 딱",
+    addr:"경강로2245번길 16 (포남동)", g:"강릉 윙윙치킨", lat:37.7660, lng:128.9075, approx:true, src:"@mindoo_pig_", insta:"https://www.instagram.com/reel/DbGWroNJhQK/" },
+  { id:"haru", name:"하루키친", area:"gn", cat:"맛집",
+    desc:"연속 블루리본 우동·덴뿌라 맛집.",
+    addr:"강릉대로587번길 23", g:"강릉 하루키친", lat:37.7690, lng:128.9110, approx:true, src:"@1ts_wonju", insta:"https://www.instagram.com/reel/Dbeki-hTr03/" },
+  { id:"sumiyaki", name:"스미야키센", area:"gn", cat:"맛집",
+    desc:"골목길에 숨어있는 야키토리동(닭꼬치덮밥) 전문점.",
+    addr:"임영로141번길 4-6", g:"강릉 스미야키센", lat:37.7570, lng:128.8990, approx:true, src:"@1ts_wonju", insta:"https://www.instagram.com/reel/Dbeki-hTr03/" },
+  { id:"chundung", name:"천둥회와물회", area:"gn", cat:"맛집",
+    desc:"모둠회 6만원대 갓성비 현지인 횟집 (초당).",
+    addr:"초당순두부길55번길 38", g:"강릉 천둥회와물회", lat:37.7925, lng:128.9140, approx:true, src:"@1ts_wonju", insta:"https://www.instagram.com/reel/Dbeki-hTr03/" },
+  { id:"chodangkong", name:"초당콩감자탕", area:"gn", cat:"맛집",
+    desc:"키티 모양 두부 올라간 이색 감자탕 (초당).",
+    addr:"초당순두부길 3", g:"초당콩감자탕", lat:37.7877, lng:128.9105, approx:true, src:"@1ts_wonju", insta:"https://www.instagram.com/reel/Dbeki-hTr03/" },
+
+  /* ---- 강릉 · 중앙시장 ---- */
+  { id:"ojingeo", name:"강릉 오징어순대", area:"gn", cat:"중앙시장 먹거리",
+    desc:"중앙시장 안 오징어순대 — 아우어매거진 '꼭 먹자' 픽.",
+    addr:"중앙시장1길 17 24호", g:"강릉 중앙시장 오징어순대", lat:37.7553, lng:128.8967, approx:true, src:"@_ourmag", insta:"https://www.instagram.com/p/DaKdlLrExz2/" },
+  { id:"paran", name:"파란간판집 (횟집)", area:"gn", cat:"중앙시장 먹거리",
+    desc:"현지인도 다 아는 시장 횟집. 모듬 1인 12,000원·4만원 세트 가성비, 섞어 포장 가능.",
+    tip:"포장해서 경포·송정 해변이나 숙소에서 먹는 게 꿀조합 — 간장·와사비 미리 챙기기",
+    addr:"금성로23번길 6 (시장 5번출구)", g:"강릉 중앙시장 파란간판 횟집", lat:37.7549, lng:128.8975, approx:true, src:"@_foopawon_ · @_ourmag", insta:"https://www.instagram.com/reel/DVlGAKcEqh-/" },
+  { id:"gilgamja", name:"길감자", area:"gn", cat:"중앙시장 먹거리",
+    desc:"밀가루 0%, 감자 반죽만으로 만든 소시지형 길거리 간식(컵 3,100원). 불닭마요·마늘간장 인기. 시장 골목에서 살짝 떨어져 있음.",
+    addr:"금성로 16 해인빌딩 103호", g:"강릉 길감자", lat:37.7546, lng:128.8960, approx:true, src:"@grumw_orld · @_ourmag", insta:"https://www.instagram.com/reel/DKjuUP6S_Yo/" },
+  { id:"baeni", name:"배니 닭강정", area:"gn", cat:"중앙시장 먹거리",
+    desc:"아우어매거진 '꼭 먹자' 픽 닭강정.",
+    addr:"금성로13번길 3-1", g:"강릉 배니닭강정", lat:37.7542, lng:128.8955, approx:true, src:"@_ourmag", insta:"https://www.instagram.com/p/DaKdlLrExz2/" },
+  { id:"cheese", name:"강릉치즈감옥", area:"gn", cat:"중앙시장 먹거리",
+    desc:"중앙시장 5번게이트 앞 치즈 구이 간식 — 시장 필수코스로 홍보하는 집.",
+    addr:"중앙시장길 14", g:"강릉치즈감옥", lat:37.7555, lng:128.8962, approx:true, src:"@seoung.gim", insta:"https://www.instagram.com/reel/DYvk8pqvNAM/" },
+  { id:"gamjacheonguk", name:"감자천국", area:"gn", cat:"중앙시장 먹거리",
+    desc:"감자채 타코야키 — 흐물반죽 아닌 바삭 감자 식감, 하루에 3번 재구매했다는 후기. 시장 동편 곶감전길 골목.",
+    addr:"곶감전길 17 1층", g:"강릉 감자천국", lat:37.751742, lng:128.897781, src:"@matzip_yo1", insta:"https://www.instagram.com/reel/DbUbs00T2fR/" },
+  { id:"matna", name:"맛나제과", area:"gn", cat:"중앙시장 먹거리",
+    desc:"중앙시장 지하 수산물시장 12번 매장의 노포 찹쌀떡 — 손바닥만한 크기, 강릉 갈 때마다 사 온다는 집.",
+    addr:"금성로 21 (시장 지하)", g:"강릉 맛나제과", lat:37.7550, lng:128.8969, approx:true, src:"@one.leisurely", insta:"https://www.instagram.com/reel/DYW9DSqBt-P/" },
+
+  /* ---- 강릉 · 카페 ---- */
+  { id:"insalt", name:"인솔트베이커리", area:"gn", cat:"카페·빵집",
+    desc:"소금빵만 15종 — 강원도 감자 반죽 48시간 저온숙성. 소시지소금빵(이베리코 숯불구이) 강추. 담쟁이덩쿨 건물, 건너편 카페에서 먹고 갈 수 있음.",
+    addr:"강릉대로194번길 12 1층", g:"강릉 인솔트베이커리", lat:37.7615, lng:128.8975, approx:true, src:"@eat._.333", insta:"https://www.instagram.com/reel/DaW8SMNS09w/" },
+  { id:"choding", name:"쵸딩", area:"gn", cat:"카페·빵집",
+    desc:"감쟈딩·두포카토가 시그니처인 초당 카페.",
+    addr:"초당순두부길 40", g:"강릉 쵸딩", lat:37.7905, lng:128.9125, approx:true, src:"@1ts_wonju", insta:"https://www.instagram.com/reel/Dbeki-hTr03/" },
+  { id:"cmd", name:"씨엠디컴퍼니", area:"gn", cat:"카페·빵집",
+    desc:"옥수수라떼 + 초당순두부 카이막 조합으로 유명.",
+    addr:"경포로 489-10", g:"강릉 씨엠디컴퍼니", lat:37.7930, lng:128.8990, approx:true, src:"@1ts_wonju", insta:"https://www.instagram.com/reel/Dbeki-hTr03/" },
+  { id:"mokgwawon", name:"목과원", area:"gn", cat:"카페·빵집",
+    desc:"갓 구운 초당옥수수 토핑을 올린 옥수수빙수.",
+    addr:"초당원길 30-9", g:"강릉 목과원", lat:37.7890, lng:128.9135, approx:true, src:"@1ts_wonju", insta:"https://www.instagram.com/reel/Dbeki-hTr03/" },
+
+  /* ---- 강릉 · 소품샵 ---- */
+  { id:"susuha", name:"수수하", area:"gn", cat:"소품샵",
+    desc:"'세상에 하나뿐인' 특이한 소품들.",
+    addr:"토성로 130", g:"강릉 수수하", lat:37.7520, lng:128.8930, approx:true, src:"@1ts_wonju", insta:"https://www.instagram.com/reel/Dbeki-hTr03/" },
+  { id:"oars", name:"오어즈", area:"gn", cat:"소품샵",
+    desc:"직접 작업한 사진으로 만든 엽서·포스터·반팔티.",
+    addr:"임영로 193 2층", g:"강릉 오어즈", lat:37.7585, lng:128.9010, approx:true, src:"@1ts_wonju", insta:"https://www.instagram.com/reel/Dbeki-hTr03/" },
+  { id:"redhammer", name:"레드망치 1·2호점", area:"gn", cat:"소품샵",
+    desc:"안국에도 분점 있는 유명샵. 1호점=DIY·할인템, 2호점=패브릭·주문제작(카페 겸업). 수요일 휴무.",
+    addr:"율곡로 2890-1 (1호) · 율곡로 2912 (2호)", g:"강릉 레드망치", lat:37.761211, lng:128.894337, src:"@ilddan_hae", insta:"https://www.instagram.com/reel/DbSxutmzNo4/" },
+  { id:"sayou", name:"사유의 공간", area:"gn", cat:"소품샵",
+    desc:"유럽 빈티지 식기·오브제 — 예쁘지만 고가, 각오하고 갈 것. 월·화 휴무 → 토·일에만 가능!",
+    addr:"임영로 194 1층 3호", g:"강릉 사유의공간", lat:37.758375, lng:128.891946, src:"@ilddan_hae", insta:"https://www.instagram.com/reel/DbSxutmzNo4/" },
+  { id:"pulnori", name:"풀노리", area:"gn", cat:"소품샵",
+    desc:"깔끔한 식기를 적당한 가격에 — 취향 안 타서 선물용으로 추천. 화·수 휴무.",
+    addr:"토성로 133 2층", g:"강릉 풀노리", lat:37.754522, lng:128.891430, src:"@ilddan_hae", insta:"https://www.instagram.com/reel/DbSxutmzNo4/" },
+  { id:"lebonmagel", name:"르봉마젤", area:"gn", cat:"소품샵",
+    desc:"유럽풍·예쁜 스텐 제품 다수(2층 카페) — 가격대 높음, 금전 준비 필수. 화·수 휴무.",
+    addr:"임영로180번길 16", g:"강릉 르봉마젤", lat:37.756944, lng:128.893423, src:"@ilddan_hae", insta:"https://www.instagram.com/reel/DbSxutmzNo4/" },
+  { id:"yoonsul", name:"윤슬서림", area:"gn", cat:"소품샵",
+    desc:"낮엔 독립서점, 밤엔 바(~02:00)로 변하는 책방 — 꼬술님 '자신 있게 추천'.",
+    addr:"임영로 138 1층", g:"강릉 윤슬서림", lat:37.753655, lng:128.892390, src:"@kkosulldio", insta:"https://www.instagram.com/reel/Day_Mxsy_KN/" },
+  { id:"hunky", name:"헝키도리커피바", area:"gn", cat:"카페·빵집",
+    desc:"꼬술님 강추 커피바 — 화요일 휴무. 솔올미술관 가는 원대로 변이라 DAY 1 동선에 딱.",
+    addr:"원대로 193", g:"강릉 헝키도리커피바", lat:37.771221, lng:128.881290, src:"@kkosulldio", insta:"https://www.instagram.com/reel/Day_Mxsy_KN/" },
+
+  /* ---- 속초 ---- */
+  { id:"dongmyeong", name:"동명활어센타", area:"sc", cat:"맛집",
+    desc:"독도새우 3종(도화·꽃·닭새우) 다 있는 유일한 집. 작은 새우 12마리 3만원선, 회도 저렴·흥정 가능.",
+    tip:"간장·와사비는 미리 사 가기(회센터엔 없음) · 튀김은 오성호튀김 12호에서",
+    addr:"동명동 1-246 (동명항)", g:"속초 동명활어센타", lat:38.2118, lng:128.6010, approx:true, src:"@go_kcalorie", insta:"https://www.instagram.com/reel/DYS9XgOzGY_/" },
+  { id:"seorakhang", name:"설악항 활어회센터", area:"sc", cat:"맛집",
+    desc:"현지인만 간다는 가성비 회센터 — 12호 '화진포&경상도아지매' 찾기.",
+    addr:"동해대로 3666", g:"속초 설악항 활어회센터", lat:38.1700, lng:128.6050, approx:true, src:"@yoonoh_log", insta:"https://www.instagram.com/reel/Da4cPfmRMQy/" },
+  { id:"sokchomarket", name:"속초 중앙시장 + 오징어 난전", area:"sc", cat:"시장",
+    desc:"오징어회 포장(7월 시세 작은 3마리 1만원) → 숙소에서 캔맥주 조합.",
+    tip:'공영주차장 이용 시 구매 점포에서 30분 무료 주차권 꼭 받기 · 주차 자체 꿀팁은 <a href="https://www.instagram.com/reel/DZP-qARq4xe/">이 영상</a> 미리 보기',
+    g:"속초 관광수산시장", lat:38.2043, lng:128.5905, src:"@chaerrier · @bbureview", insta:"https://www.instagram.com/reel/DbFOpyrzURL/" },
+  { id:"macaopark", name:"마카오박", area:"sc", cat:"카페·빵집",
+    desc:"파삭한 마카오식 에그타르트 2,500원 — 사자마자 바로 먹어야 최고. 휘낭시에는 얼려 먹으면 쫀득.",
+    tip:"전날 새벽 6시~오전 9시 문자 예약만 받음 — DAY 2에 가려면 토요일 아침에 문자!",
+    addr:"중앙로129번길 4", g:"속초 마카오박", lat:38.2065, lng:128.5920, approx:true, src:"@damuk__ · @tanizz._.zz", insta:"https://www.instagram.com/reel/DYng7QBTawO/" },
+  { id:"daore", name:"다오레 속초호떡", area:"sc", cat:"카페·빵집",
+    desc:"카다이프 가득 두바이초코호떡 — '속초에서 안 가면 후회' 픽. 속초해수욕장 입구.",
+    addr:"동해대로 3942 1층", g:"다오레 속초호떡", lat:38.1900, lng:128.6008, approx:true, src:"@daorehotteok", insta:"https://www.instagram.com/reel/DZ4oWztzqqI/" },
+  { id:"zerozero", name:"오스테리아 제로제로", area:"sc", cat:"맛집",
+    desc:"3번 넘게 재방문한 이탈리안 — 제주맥주 출신+유학파 요리사 두 분. 코스보다 단품 해산물 추천. 화요일 휴무.",
+    addr:"엑스포로2길 22 3층", g:"속초 오스테리아 제로제로", lat:38.195636, lng:128.580506, src:"@hyomi_sae", insta:"https://www.instagram.com/reel/DZ9w9b-JJJ6/" },
+  { id:"hama", name:"하마식당", area:"sc", cat:"맛집",
+    desc:"후토마키 존맛집 — 웨이팅 있음. 영랑해안 쪽(동명항 북쪽). 화·수 휴무.",
+    addr:"영랑해안3길 64", g:"속초 하마식당", lat:38.216539, lng:128.594601, src:"@hyomi_sae", insta:"https://www.instagram.com/reel/DZ9w9b-JJJ6/" },
+  { id:"danchen", name:"단천식당", area:"sc", cat:"맛집",
+    desc:"오징어순대와 명태회냉면 존맛 (아바이마을).",
+    addr:"아바이마을길 17", g:"속초 단천식당", lat:38.202584, lng:128.593772, src:"@hyomi_sae", insta:"https://www.instagram.com/reel/DZ9w9b-JJJ6/" },
+  { id:"jjinppang", name:"찐빵뗏거리 1호점", area:"sc", cat:"카페·빵집",
+    desc:"줄이 너무 길어 2호점까지 생긴 찐빵집 — 1호점이 더 맛있다는 평. 중앙시장 옆.",
+    addr:"중앙시장로6길 14", g:"속초 찐빵뗏거리", lat:38.204992, lng:128.589596, src:"@hyomi_sae", insta:"https://www.instagram.com/reel/DZ9w9b-JJJ6/" },
+  { id:"songdo", name:"송도물회", area:"sc", cat:"맛집",
+    desc:"강원도식 물회(어른입맛) 추천 — 새콤 양념파는 청초수·항아리로. 화요일 휴무.",
+    addr:"중앙부두길 63", g:"속초 송도물회", lat:38.203507, lng:128.591991, src:"@hyomi_sae", insta:"https://www.instagram.com/reel/DZ9w9b-JJJ6/" },
+  { id:"bali", name:"발리조개", area:"sc", cat:"맛집",
+    desc:"꽤 맛있었다는 조개구이집 (청호동).",
+    addr:"설악금강대교로 52 1층", g:"속초 발리조개", lat:38.194680, lng:128.595196, src:"@hyomi_sae", insta:"https://www.instagram.com/reel/DZ9w9b-JJJ6/" },
+  { id:"gangdongho", name:"강동호식당", area:"sc", cat:"맛집",
+    desc:"썸네일의 그 물곰탕(지리) — 웨이팅 많지만 회전 빨라 20분 컷. 가자미조림도 유명.",
+    addr:"만천1길 16-1", g:"속초 강동호식당", lat:38.199138, lng:128.575970, src:"@hyomi_sae", insta:"https://www.instagram.com/reel/DZ9w9b-JJJ6/" },
+  { id:"walnut", name:"호두잡화점", area:"sc", cat:"소품샵",
+    desc:"컬러감 예쁜 식기·소품 — 아기자기+유니크 아이템 큐레이션. 소품샵 골목의 시작점.",
+    addr:"새마을6길 10 1층", g:"속초 호두잡화점", lat:38.1912, lng:128.5990, approx:true, src:"@plateau.magazine", insta:"https://www.instagram.com/p/DbfmtAak4LZ/" },
+  { id:"zoging", name:"조개줍깅", area:"sc", cat:"소품샵",
+    desc:"조개로 만든 소품들 — 속초 바다 무드를 기념품으로.",
+    addr:"동해대로 3940 지하1층", g:"속초 조개줍깅", lat:38.1902, lng:128.6006, approx:true, src:"@plateau.magazine", insta:"https://www.instagram.com/p/DbfmtAak4LZ/" },
+  { id:"asianhw", name:"아시안하이웨이", area:"sc", cat:"소품샵",
+    desc:"귀여운 색감 × 한국식 힙합 — 포스터·뱃지·굿즈.",
+    addr:"새마을6길 13", g:"속초 아시안하이웨이", lat:38.1913, lng:128.5992, approx:true, src:"@plateau.magazine", insta:"https://www.instagram.com/p/DbfmtAak4LZ/" },
+  { id:"mogring", name:"모그링", area:"sc", cat:"소품샵",
+    desc:"거북이·문어 등 바다바다한 소품 — 요즘 인기 행운거북이 입양 가능.",
+    addr:"새마을1길 18 1층", g:"속초 모그링", lat:38.1925, lng:128.5985, approx:true, src:"@plateau.magazine", insta:"https://www.instagram.com/p/DbfmtAak4LZ/" },
+  { id:"gid", name:"카페 긷", area:"sc", cat:"카페·빵집",
+    desc:"설악산 자락의 공간 카페 — 10:30~18:00, 노펫존. 속초 시내에서 차 15분.",
+    addr:"원암학사평길 60", g:"속초 카페 긷", lat:38.1740, lng:128.5190, approx:true, src:"@nazacca", insta:"https://www.instagram.com/reel/DaDBQ6-tdje/" },
+  { id:"shltr", name:"셜터", area:"sc", cat:"카페·빵집",
+    desc:"청호동 해변 공간 카페 — 09:30~20:00.",
+    addr:"청호해안길 97", g:"속초 셜터", lat:38.1975, lng:128.5985, approx:true, src:"@nazacca", insta:"https://www.instagram.com/reel/DaDBQ6-tdje/" },
+  { id:"cheoksan", name:"척산온천 찹쌀떡", area:"sc", cat:"카페·빵집",
+    desc:"찹쌀떡 10,000원 — 척산온천장 카운터에서 판매(오전 매진).",
+    tip:"전날 오전 전화 예약 필수(033-636-4806) — 현장분은 오전 8시경 매진!",
+    addr:"관광로 288 (척산온천장)", g:"속초 척산온천장", lat:38.19025, lng:128.54069,
+    hours:"온천장 06:00–20:00", park:"온천장 주차장", src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+
+  /* ---- 속초 · tanizz 가격 리스트 ---- */
+  { id:"sunkyung", name:"선경분식", area:"sc", cat:"맛집", desc:"샐러드김밥 4,000원. ⚠ 토·일·공휴일 휴무 — 이번 여행 일정(토~월)엔 방문 불가!", addr:"동해대로 4236 아남프라자 지하", g:"속초 선경분식", lat:38.19727, lng:128.57758, closed:[0,6], src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"janggun", name:"장군시오야끼", area:"sc", cat:"맛집", desc:"시오야끼(생선소금구이) 1인 14,000원. 일요일 휴무 → DAY 2엔 못 가요.", addr:"먹거리8길 5-1", g:"속초 장군시오야끼", lat:38.19437, lng:128.57470, closed:[0], src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"leejungsook", name:"이정숙왕손만두찐빵", area:"sc", cat:"카페·빵집", desc:"김치치즈만두 4,500원. 속초해변 소품샵 골목 근처. 월요일 휴무.", addr:"새마을길 28", g:"속초 이정숙왕손만두찐빵", lat:38.18652, lng:128.60298, closed:[1], src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"yukgu", name:"육구방앗간", area:"sc", cat:"카페·빵집", desc:"찹쌀떡 8개 5,000원 — 대기표제(구 동양제과, 척산온천 납품 이력).", addr:"청학로 13 1층", g:"속초 육구방앗간", lat:38.20093, lng:128.58366, src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"bongbread", name:"봉브레드", area:"sc", cat:"카페·빵집", desc:"마늘바게트 6,500원 — 속초 마늘빵 유명집. 목요일 휴무.", addr:"동해대로 4344-1", g:"속초 봉브레드", lat:38.20291, lng:128.56847, closed:[4], src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"yetjangmo", name:"옛장모숯불갈비", area:"sc", cat:"맛집", desc:"숯불갈비 21,000원 (등록명 '장모숯불갈비'). 월요일 휴무.", addr:"교동로 35", g:"속초 장모숯불갈비", lat:38.20225, lng:128.57865, closed:[1], src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"hoega", name:"회가", area:"sc", cat:"맛집", desc:"모듬회(소) 39,000원.", addr:"번영로43번길 18-2", g:"속초 회가", lat:38.205438, lng:128.581647, src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"whoohee", name:"후히", area:"sc", cat:"카페·빵집", desc:"과일카페 — 딸기빙수 24,000원(딸기우유 +3,000). 중앙시장 공영주차장 인근.", addr:"중앙시장로3길 5 1층", g:"속초 후히", lat:38.2058441, lng:128.5880804, src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"byeolcheonji", name:"별천지", area:"sc", cat:"맛집", desc:"실내포차 — 오징어볶음 25,000원. 일요일 휴무라 DAY 2(일)엔 못 가요!", addr:"청초호반로 294", g:"속초 별천지", lat:38.2015357, lng:128.5892875, src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"neulbom", name:"시골빵집늘봄", area:"sc", cat:"카페·빵집", desc:"들깨바게트 4,000원.", addr:"온정로1길 11-10", g:"속초 시골빵집늘봄", lat:38.1849148, lng:128.5908018, src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"mirang", name:"미랑식당", area:"sc", cat:"맛집", desc:"오삼불고기 1인 16,000원 (교동).", addr:"먹거리9길 16", g:"속초 미랑식당", lat:38.1944687, lng:128.5764792, src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" },
+  { id:"okran", name:"옥란푸딩", area:"sc", cat:"카페·빵집", desc:"최옥란할머니순두부 계열 푸딩 5,000원. 속초해수욕장 소품샵 골목 근처.", addr:"새마을길 40 1층", g:"속초 옥란푸딩", lat:38.1864526, lng:128.6036686, src:"@tanizz._.zz", insta:"https://www.instagram.com/reel/DXvxONhoIUP/" }
+];
+
+const PENDING = [
+  { t:"속초 숨겨진 닭강정 맛집", d:"'다른 집 박스 들고 가는 분들께 여기 것도 사라고 하고 싶다'는 집 — 가게 이름이 영상에만 나와요. 영상 확인 후 알려주시면 리스트에 추가할게요.", src:"@sunn416", url:"https://www.instagram.com/reel/DaPnyXyt9T5/" },
+  { t:"강릉여행 추천 1탄 (공간 모음)", d:"장소 이름들이 영상 화면에만 있어요.", src:"@buttercci", url:"https://www.instagram.com/reel/DZcrRolvaxT/" }
+];
+
+/* ================================================================ */
+/* 영업시간·휴무·주차 (closed: 0=일 1=월 … 6=토) — 확인되는 대로 추가 */
+const INFO = {
+  solol:      { hours:"10:00–18:00", close:"월 휴관", closed:[1] },
+  goraeseom:  { hours:"10:00–21:00 (L.O 19:50)", close:"연중무휴", park:"가게 무료주차(협소)" },
+  geumhak:    { hours:"10:00–18:30", close:"일 휴무", closed:[0], park:"불가 → 중앙시장 공영(도보 10분)" },
+  yetcanaria: { hours:"10:45–20:00 (브레이크 14:30–15:40)", close:"화 휴무 · 월은 15시까지", closed:[2], park:"뒤편 무료주차" },
+  pongnam:    { hours:"11:30–19:30 (브레이크 14:30–15:30)", close:"수 휴무", closed:[3], park:"가게 앞 2–3대, 만차 시 공영" },
+  solbaram:   { hours:"11:00–22:00", close:"연중무휴", park:"넓은 무료주차장" },
+  sagye:      { hours:"15:00–22:00 (재료소진 마감)", close:"목 휴무", closed:[4], park:"협소 → 인근 공영 권장" },
+  haru:       { hours:"11:00–20:00 (브레이크 15:00–16:30)", close:"화 휴무", closed:[2], park:"전용(협소) + 옆 공영" },
+  sumiyaki:   { hours:"11:30–20:00 (브레이크 16:00–17:00)", close:"화 휴무", closed:[2], park:"불가 → 해람중 공영·서부시장" },
+  chundung:   { hours:"11:00–22:00", close:"화 휴무", closed:[2], park:"가게 앞 넉넉" },
+  chodangkong:{ hours:"10:30–20:00 (브레이크 15:00–17:00)", close:"수 휴무", closed:[3], park:"전용(협소), 만차 시 허난설헌기념관" },
+  insalt:     { hours:"10:30–18:00 (소진 시 마감)", close:"연중무휴", park:"없음 → 월화거리 공영(도보 5분)" },
+  choding:    { hours:"11:00–18:00", close:"수 휴무", closed:[3], park:"전용 무료" },
+  cmd:        { hours:"11:00–20:00", close:"연중무휴", park:"전용 무료(코모도호텔 뒤)" },
+  mokgwawon:  { hours:"10:00–22:00", close:"연중무휴", park:"전용 자갈 주차장(넓음)" },
+  sayou:      { hours:"12:00–17:00", close:"월·화 휴무", closed:[1,2] },
+  pulnori:    { hours:"12:00–17:30", close:"화·수 휴무", closed:[2,3] },
+  lebonmagel: { hours:"11:30–18:30", close:"화·수 휴무", closed:[2,3] },
+  redhammer:  { hours:"10:30–18:50", close:"수 휴무 표기 + 비정기 휴무 잦음 — 인스타 확인", closed:[3] },
+  hunky:      { hours:"12:00–21:00", close:"화 휴무", closed:[2] },
+  yoonsul:    { hours:"금~월 11:00–21:00 (화~목 ~19:00)", close:"연중무휴" },
+  susuha:     { hours:"11:30–18:00", close:"화·수 휴무", closed:[2,3] },
+  oars:       { hours:"12:00–18:00", close:"화 휴무 (월 휴무 표기도 — 월 방문 전 확인)", closed:[2] },
+  ojingeo:    { park:"중앙시장 공영(15분 무료·30분 500원) / 남대천둔치 무료" },
+  paran:      { hours:"11:00–22:00", close:"연중무휴", park:"중앙시장 공영(15분 무료·30분 500원) / 남대천둔치 무료" },
+  gilgamja:   { hours:"10:30–20:00", close:"연중무휴", park:"중앙시장 공영(15분 무료·30분 500원) / 남대천둔치 무료" },
+  baeni:      { hours:"09:00–21:00", close:"연중무휴", park:"중앙시장 공영(15분 무료·30분 500원) / 남대천둔치 무료" },
+  cheese:     { hours:"12:00–19:00 (소진 시 마감)", close:"수 휴무", closed:[3], park:"중앙시장 공영(15분 무료·30분 500원)" },
+  gamjacheonguk:{ hours:"11:00–19:30", close:"수 휴무", closed:[3], park:"중앙시장 공영(15분 무료·30분 500원)" },
+  matna:      { hours:"09:00–20:30", close:"연중무휴", park:"중앙시장 공영(15분 무료·30분 500원)" },
+  sokchomarket:{ hours:"08:00–24:00 (점포별 상이)", close:"연중무휴 · 회센터는 둘째 수 휴무", park:"전용 350대(30분 300원) — 1만원 이상 구매 시 30분 무료권, 1일 2매" },
+  wingwing:   { hours:"17:00–23:00 (L.O 22:30)", close:"일 휴무", closed:[0] },
+  dongmyeong: { hours:"07:00–21:00", close:"연중무휴(점포별 상이)", park:"직판장 유료주차(기본 1,000원)" },
+  seorakhang: { hours:"대체로 09:00–22:00 (점포별 상이)", park:"센터 주차장(30분 600원)" },
+  macaopark:  { hours:"10:20–15:00 (브레이크 12:00–14:30)", close:"화~금 휴무 — 토·일·월만 영업!", closed:[2,3,4,5], park:"매장 앞 불가 → 맞은편 유료·공영" },
+  daore:      { hours:"토·일 11:00–22:00 (평일 12:00~)", close:"연중무휴", park:"매장 앞 불가 → 인근 갓길" },
+  zerozero:   { hours:"11:15–21:00 (브레이크 15:00–17:00)", close:"화 휴무(수 휴무 표기도 있음 — 확인 권장)", closed:[2] },
+  hama:       { hours:"11:30–15:30 (점심만)", close:"화·수 휴무", closed:[2,3], park:"불가 → 등대해변 주차" },
+  danchen:    { hours:"08:30–19:00 (L.O 18:30)", close:"연중무휴", park:"아바이마을 공영(무료)" },
+  jjinppang:  { hours:"09:30–19:30", close:"1호점 폐업 설 있음 — 방문 전 확인", park:"중앙시장 공영(30분 300원)" },
+  songdo:     { hours:"09:00–21:00 (브레이크 15:00–17:00)", close:"화 휴무", closed:[2], park:"전용 주차장" },
+  bali:       { hours:"12:00–23:00", close:"연중무휴", park:"가게 앞·뒷골목 전용" },
+  gangdongho: { hours:"08:00–15:00 (재료소진 마감)", close:"1·3번째 화 휴무", park:"매장 앞 2~3대" },
+  hoega:      { hours:"11:00–22:00 (L.O 21:00)", close:"수 휴무", closed:[3], park:"매장 앞 일렬·건물 옆" },
+  mirang:     { hours:"10:30–21:30 (L.O 20:30)", close:"연중무휴", park:"매장 앞 가능" },
+  byeolcheonji:{ hours:"17:00–22:30", close:"일 휴무", closed:[0] },
+  sunkyung:   { close:"토·일·공휴일 휴무", closed:[0,6] },
+  janggun:    { close:"일 휴무", closed:[0] },
+  leejungsook:{ close:"월 휴무", closed:[1] },
+  bongbread:  { close:"목 휴무", closed:[4] },
+  yetjangmo:  { close:"월 휴무", closed:[1] },
+  gid:        { hours:"10:30–18:00 (L.O 17:30)", close:"연중무휴", park:"무료 전용주차장(넓음)" },
+  shltr:      { hours:"09:30–20:00 (L.O 19:00)", close:"연중무휴", park:"전용(도보 1분) + 해안도로 노상 무료" },
+  walnut:     { hours:"11:00–17:00", close:"수 휴무", closed:[3], park:"무료(골목)" },
+  zoging:     { hours:"11:00–18:00", close:"비정기 — 인스타 공지 확인", park:"건물 지하 무료" },
+  asianhw:    { hours:"11:00–18:00", park:"없음 → 인근 골목·공영" },
+  mogring:    { hours:"12:30–21:00", close:"수 휴무", closed:[3] },
+  whoohee:    { hours:"19:00–23:00 (토 18:00~)", close:"비정기", park:"중앙시장 옆 주차장",
+                tip:"저녁 전용 + 홀 없이 포장/배달 위주 — 전화 주문 후 픽업 (낮에 가면 헛걸음!)" },
+  okran:      { hours:"10:30–18:30 (재고 소진 시 마감)", park:"무료주차" },
+  neulbom:    { hours:"08:00–18:30 (소진 시 마감)", close:"일·월 휴무", closed:[0,1],
+                tip:"속초 가는 날이 일요일이라 이번 여행에선 못 가요 (일·월 휴무)" },
+  cheoksan2:  {}
+};
+const enc = encodeURIComponent;
+const byId = {}; PLACES.forEach(p => { Object.assign(p, INFO[p.id] || {}); byId[p.id] = p; });
+const DAY_WD = { 1: 6, 2: 0, 3: 1 }; // 토, 일, 월
+const WD_NAME = { 1: "토", 2: "일", 3: "월" };
+function postImg(insta) {
+  const m = insta && insta.match(/instagram\.com\/(reel|p)\/([^/?]+)/);
+  return m ? `img/${m[1]}_${m[2]}.jpg` : null;
+}
+function getCss(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+const DAY_COLORS = { 1: getCss("--d1"), 2: getCss("--d2"), 3: getCss("--d3") };
+
+const DAYS_META = [
+  { d:1, date:"9. 19 토요일", sub:"서울 → 강릉", pre:"서울 출발 → 강릉", post:"15:00~ 호텔 체크인 · 송정해변 산책" },
+  { d:2, date:"9. 20 일요일", sub:"속초 당일치기", pre:"오전 호텔 출발 → 속초 (차 약 1시간)", post:"저녁 강릉 복귀" },
+  { d:3, date:"9. 21 월요일", sub:"강릉 → 서울", pre:"~11:00 체크아웃", post:"서울 도착" }
+];
+
+/* ---- 상태 (localStorage) ---- */
+const LS_KEY = "gn-trip-v1";
+let S = { ord: { 1:["solol"], 2:[], 3:[] }, time: {} };
+try {
+  const saved = JSON.parse(localStorage.getItem(LS_KEY));
+  if (saved && saved.ord) S = saved;
+} catch (e) {}
+function save() { localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+function dayOf(id) { for (const d of [1,2,3]) if (S.ord[d].includes(id)) return d; return 0; }
+
+/* ---- D-day ---- */
+(function () {
+  const start = new Date("2026-09-19T00:00:00"), end = new Date("2026-09-21T23:59:59");
+  const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const el = document.getElementById("dday");
+  const diff = Math.round((start - today) / 86400000);
+  if (diff > 0) el.textContent = "D-" + diff;
+  else if (now <= end) el.textContent = "여행 중 · DAY " + (Math.round((today - start) / 86400000) + 1);
+  else el.textContent = "여행 완료";
+})();
+
+/* ---- 지도 ---- */
+const map = L.map("map", { scrollWheelZoom: false });
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+const markerLayer = L.layerGroup().addTo(map);
+let routeLayer = null;
+const capEl = document.getElementById("mapCap");
+const routeCache = {};
+let curTab = 0; // 0=전체, 1~3=DAY
+
+function popupHtml(p, extra) {
+  return `<b>${p.name}</b><br>${extra || ""}<a href="https://map.naver.com/p/search/${enc(p.g)}">네이버 ↗</a> · <a href="https://www.google.com/maps/search/?api=1&query=${enc(p.g)}">구글 ↗</a>`;
+}
+function drawMarkers(tab) {
+  markerLayer.clearLayers();
+  const hotelIcon = L.divIcon({ className:"pin-label", html:`<div style="background:${getCss("--ink")}">🏨</div>`, iconSize:[26,26], iconAnchor:[13,24], popupAnchor:[0,-22] });
+  L.marker([HOTEL.lat, HOTEL.lng], { icon: hotelIcon }).addTo(markerLayer).bindPopup(popupHtml(HOTEL, "베이스캠프 · 2박<br>"));
+  for (const d of [1,2,3]) {
+    if (tab !== 0 && tab !== d) continue; // 해당 DAY 탭이면 그날 핀만
+    S.ord[d].forEach((id, i) => {
+      const p = byId[id];
+      if (!p || p.lat == null) return;
+      const icon = L.divIcon({ className:"pin-label", html:`<div style="background:${DAY_COLORS[d]}">${i+1}</div>`, iconSize:[26,26], iconAnchor:[13,24], popupAnchor:[0,-22] });
+      L.marker([p.lat, p.lng], { icon }).addTo(markerLayer)
+        .bindPopup(popupHtml(p, `DAY ${d} · ${i+1}번째${p.approx ? " · <small>위치 근사치</small>" : ""}<br>`));
+    });
+  }
+  if (tab === 0) PLACES.forEach(p => {
+    if (p.lat == null || dayOf(p.id)) return;
+    L.circleMarker([p.lat, p.lng], { radius: 5, color: getCss("--ink-soft"), weight: 1.5, fillOpacity: 0.5 })
+      .addTo(markerLayer).bindPopup(popupHtml(p, "미배치 후보 — 리스트에서 DAY 버튼으로 배치<br>"));
+  });
+}
+function dayWaypoints(d) {
+  const stops = S.ord[d].map(id => byId[id]).filter(p => p && p.lat != null).map(p => [p.lat, p.lng]);
+  const skipped = S.ord[d].filter(id => byId[id] && byId[id].lat == null).length;
+  if (!stops.length) return { pts: null, skipped };
+  const H = [HOTEL.lat, HOTEL.lng];
+  if (d === 1) return { pts: [...stops, H], skipped };
+  if (d === 2) return { pts: [H, ...stops, H], skipped };
+  return { pts: [H, ...stops], skipped };
+}
+async function showTab(i) {
+  curTab = i;
+  document.querySelectorAll("#mapTabs .map-tab").forEach((t, j) => t.classList.toggle("on", j === i));
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  drawMarkers(i);
+  if (i === 0) {
+    capEl.textContent = "전체 보기 — 모은 장소 전부";
+    const pts = PLACES.filter(p => p.lat != null && p.area !== "etc").map(p => [p.lat, p.lng]);
+    pts.push([HOTEL.lat, HOTEL.lng]);
+    map.fitBounds(L.latLngBounds(pts).pad(0.12));
+    return;
+  }
+  const d = i;
+  const { pts, skipped } = dayWaypoints(d);
+  const skipNote = skipped ? ` · 위치 미확정 ${skipped}곳 경로 제외` : "";
+  if (!pts) {
+    capEl.textContent = `DAY ${d}: 배치된 장소(위치 확정)가 없어요.${skipNote}`;
+    map.setView([HOTEL.lat, HOTEL.lng], 12);
+    return;
+  }
+  capEl.textContent = "자차 경로 계산 중…";
+  const key = pts.map(p => p.join()).join(";");
+  try {
+    if (!routeCache[key]) {
+      const coords = pts.map(p => p[1] + "," + p[0]).join(";");
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+      const json = await res.json();
+      if (json.code !== "Ok" || !json.routes || !json.routes.length) throw new Error("no route");
+      routeCache[key] = json.routes[0];
+    }
+    if (curTab !== d) return;
+    const r = routeCache[key];
+    routeLayer = L.geoJSON(r.geometry, { style: { color: DAY_COLORS[d], weight: 5, opacity: 0.75 } }).addTo(map);
+    map.fitBounds(routeLayer.getBounds().pad(0.15));
+    const km = (r.distance / 1000).toFixed(1);
+    const min = Math.round(r.duration / 60);
+    const t = min >= 60 ? `${Math.floor(min/60)}시간 ${min%60}분` : `${min}분`;
+    capEl.innerHTML = `DAY ${d} 자차 동선 · <b>${km}km · 운전 약 ${t}</b> (교통 미반영)${skipNote}`;
+  } catch (e) {
+    if (curTab !== d) return;
+    routeLayer = L.polyline(pts, { color: DAY_COLORS[d], weight: 3, dashArray: "6 8", opacity: 0.7 }).addTo(map);
+    map.fitBounds(routeLayer.getBounds().pad(0.15));
+    capEl.textContent = `DAY ${d} 동선 (경로 계산 실패 — 직선 표시)${skipNote}`;
+  }
+}
+const tabsEl = document.getElementById("mapTabs");
+["전체", "DAY 1", "DAY 2", "DAY 3"].forEach((label, i) => {
+  const b = document.createElement("button");
+  b.className = "map-tab" + (i === 0 ? " on" : "");
+  b.textContent = label;
+  b.addEventListener("click", () => showTab(i));
+  tabsEl.appendChild(b);
+});
+
+/* ---- 일정 렌더 ---- */
+function haversine(a, b) {
+  const R = 6371, dLa = (b[0]-a[0])*Math.PI/180, dLo = (b[1]-a[1])*Math.PI/180;
+  const x = Math.sin(dLa/2)**2 + Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+function optimizeDay(d) {
+  const ids = S.ord[d].filter(id => byId[id] && byId[id].lat != null);
+  const noPos = S.ord[d].filter(id => !ids.includes(id));
+  if (ids.length < 2) return;
+  const slotTimes = S.ord[d].map(id => S.time[id]); // 시간표는 자리에 유지
+  let cur = [HOTEL.lat, HOTEL.lng];
+  const rest = [...ids], order = [];
+  while (rest.length) {
+    rest.sort((a, b) => haversine(cur, [byId[a].lat, byId[a].lng]) - haversine(cur, [byId[b].lat, byId[b].lng]));
+    const next = rest.shift();
+    order.push(next);
+    cur = [byId[next].lat, byId[next].lng];
+  }
+  if (d === 1) order.reverse(); // DAY 1은 호텔에서 끝나는 동선
+  S.ord[d] = [...order, ...noPos];
+  S.ord[d].forEach((id, i) => { S.time[id] = slotTimes[i]; });
+  save(); renderAll();
+}
+const daysEl = document.getElementById("days");
+function renderDays() {
+  daysEl.innerHTML = "";
+  DAYS_META.forEach(m => {
+    const d = m.d;
+    const sec = document.createElement("section");
+    sec.className = "day";
+    const head = document.createElement("div");
+    head.className = "day-head";
+    head.innerHTML = `<span class="d">DAY ${d}</span><span class="date">${m.date} · ${m.sub}</span>`;
+    if (S.ord[d].length > 1) {
+      const sb = document.createElement("button");
+      sb.className = "sort-btn"; sb.textContent = "가까운 순 정렬";
+      sb.addEventListener("click", () => optimizeDay(d));
+      head.appendChild(sb);
+    }
+    sec.appendChild(head);
+    const ul = document.createElement("ul");
+    ul.className = "stops";
+    ul.innerHTML = `<li class="stoprow fixed"><span class="num" style="background:var(--line)">·</span><span class="nm">${m.pre}</span></li>`;
+    if (!S.ord[d].length) {
+      const li = document.createElement("li");
+      li.className = "day-empty";
+      li.textContent = "아래 장소 리스트에서 DAY " + d + " 버튼을 눌러 배치하세요.";
+      ul.appendChild(li);
+    }
+    S.ord[d].forEach((id, i) => {
+      const p = byId[id]; if (!p) return;
+      const li = document.createElement("li");
+      li.className = "daycard";
+      li.style.borderLeft = `4px solid ${DAY_COLORS[d]}`;
+      const noPos = p.lat == null ? ` <span class="badge flag">⚠ 위치 미확정 — 경로 제외</span>` : "";
+      const closedWarn = p.closed && p.closed.includes(DAY_WD[d]) ? ` <span class="badge flag">⚠ ${WD_NAME[d]}요일 휴무!</span>` : "";
+      const img = postImg(p.insta);
+      const info = [p.hours ? "⏰ " + p.hours : null, p.close ? "🚫 " + p.close : null, p.park ? "🅿 " + p.park : null].filter(Boolean).join(" · ");
+      li.innerHTML = `
+        <div class="stop-head">
+          <span class="num" style="background:${DAY_COLORS[d]}">${i+1}</span>
+          <input class="t" type="time">
+          <span style="flex:1"></span>
+          <button class="icon-btn up" aria-label="위로">↑</button>
+          <button class="icon-btn down" aria-label="아래로">↓</button>
+          <button class="icon-btn del" aria-label="빼기">✕</button>
+        </div>
+        <div class="cardflex">
+          ${img ? `<img class="thumb" src="${img}" alt="" loading="lazy" onerror="this.remove()">` : ""}
+          <div class="pbody">
+            <h3>${p.name} <span class="badge ${AREA_BADGE[p.area]}">${AREA_LABEL[p.area]}</span>${closedWarn}${noPos}</h3>
+            <p class="desc">${p.desc}</p>
+            ${p.tip ? `<p class="ptip">💡 ${p.tip}</p>` : ""}
+            <p class="meta">${p.addr ? p.addr + " · " : ""}${p.cat} · 출처 ${p.src}</p>
+            ${info ? `<p class="meta">${info}</p>` : ""}
+            <div class="assign"><span class="links" style="margin-left:0">
+              <a href="https://map.naver.com/p/search/${enc(p.g)}">네이버</a><a href="https://www.google.com/maps/search/?api=1&query=${enc(p.g)}">구글</a><a href="${p.insta}">원본</a>
+            </span></div>
+          </div>
+        </div>`;
+      const t = li.querySelector("input.t");
+      const tv = (S.time[id] || "").match(/\d{1,2}:\d{2}/);
+      t.value = tv ? tv[0].padStart(5, "0") : "";
+      t.addEventListener("change", () => { S.time[id] = t.value; save(); });
+      const swap = (j) => { // 순서 교환 시 시간은 자리에 남도록 서로 맞교환
+        const a = S.ord[d][j], b = S.ord[d][i];
+        [S.ord[d][j], S.ord[d][i]] = [b, a];
+        [S.time[a], S.time[b]] = [S.time[b], S.time[a]];
+        save(); renderAll();
+      };
+      li.querySelector(".up").addEventListener("click", () => { if (i > 0) swap(i - 1); });
+      li.querySelector(".down").addEventListener("click", () => { if (i < S.ord[d].length - 1) swap(i + 1); });
+      li.querySelector(".del").addEventListener("click", () => { S.ord[d] = S.ord[d].filter(x => x !== id); save(); renderAll(); });
+      ul.appendChild(li);
+    });
+    const post = document.createElement("li");
+    post.className = "stoprow fixed";
+    post.innerHTML = `<span class="num" style="background:var(--line)">·</span><span class="nm">${m.post}</span>`;
+    ul.appendChild(post);
+    sec.appendChild(ul);
+    daysEl.appendChild(sec);
+  });
+}
+
+/* ---- 장소 풀 ---- */
+const AREA_LABEL = { gn:"강릉", sc:"속초", etc:"고성·동해" };
+const AREA_BADGE = { gn:"area-gn", sc:"area-sc", etc:"area-etc" };
+let filter = "all";
+const filtersEl = document.getElementById("filters");
+[["all","전체"],["gn","강릉"],["sc","속초"]].forEach(([k, label]) => {
+  const b = document.createElement("button");
+  b.className = "map-tab" + (k === "all" ? " on" : "");
+  b.textContent = label;
+  b.addEventListener("click", () => {
+    filter = k;
+    filtersEl.querySelectorAll(".map-tab").forEach(t => t.classList.remove("on"));
+    b.classList.add("on");
+    renderPool();
+  });
+  filtersEl.appendChild(b);
+});
+const CAT_ORDER = ["맛집", "중앙시장 먹거리", "카페·빵집", "소품샵", "공간·전시", "시장", "가격만 확인됨"];
+const poolEl = document.getElementById("pool");
+function renderPool() {
+  poolEl.innerHTML = "";
+  const list = PLACES.filter(p => filter === "all" || p.area === filter);
+  document.getElementById("poolCount").textContent = `${PLACES.length}곳 수집됨`;
+  CAT_ORDER.forEach(cat => {
+    const items = list.filter(p => p.cat === cat);
+    if (!items.length) return;
+    let container = poolEl;
+    if (cat === "가격만 확인됨") {
+      const det = document.createElement("details");
+      det.className = "subgroup";
+      det.innerHTML = `<summary>속초 가격 리스트 ${items.length}곳 (주소 미기재 — 펼쳐보기)</summary>`;
+      poolEl.appendChild(det);
+      container = det;
+    } else {
+      const h = document.createElement("div");
+      h.className = "cat-head";
+      h.innerHTML = `${cat} <span>· ${items.length}</span>`;
+      poolEl.appendChild(h);
+    }
+    items.forEach(p => {
+      const d = dayOf(p.id);
+      const card = document.createElement("div");
+      card.className = "pcard" + (d ? " assigned" : "");
+      const img = postImg(p.insta);
+      const body = document.createElement("div");
+      body.className = "pbody";
+      card.innerHTML = img ? `<img class="thumb" src="${img}" alt="" loading="lazy" onerror="this.remove()">` : "";
+      const conflict = d && p.closed && p.closed.includes(DAY_WD[d]);
+      const info = [p.hours ? "⏰ " + p.hours : null, p.close ? "🚫 " + p.close : null, p.park ? "🅿 " + p.park : null].filter(Boolean).join(" · ");
+      body.innerHTML = `<h3>${p.name} <span class="badge ${AREA_BADGE[p.area]}">${AREA_LABEL[p.area]}</span>${conflict ? ` <span class="badge flag">⚠ DAY ${d}(${WD_NAME[d]}) 휴무!</span>` : ""}${p.flag ? ` <span class="badge flag">⚠ ${p.flag}</span>` : ""}</h3>
+        <p class="desc">${p.desc}</p>
+        ${p.tip ? `<p class="ptip">💡 ${p.tip}</p>` : ""}
+        <p class="meta">${p.addr ? p.addr + " · " : ""}출처 ${p.src}</p>${info ? `<p class="meta">${info}</p>` : ""}`;
+      card.appendChild(body);
+      const row = document.createElement("div");
+      row.className = "assign";
+      [1,2,3].forEach(dd => {
+        const b = document.createElement("button");
+        b.className = "abtn" + (d === dd ? " on" : "");
+        b.textContent = "DAY " + dd;
+        b.addEventListener("click", () => {
+          for (const x of [1,2,3]) S.ord[x] = S.ord[x].filter(id => id !== p.id);
+          if (d !== dd) S.ord[dd].push(p.id);
+          save(); renderAll();
+        });
+        row.appendChild(b);
+      });
+      const links = document.createElement("span");
+      links.className = "links";
+      links.innerHTML = `<a href="https://map.naver.com/p/search/${enc(p.g)}">네이버</a><a href="https://www.google.com/maps/search/?api=1&query=${enc(p.g)}">구글</a><a href="${p.insta}">원본</a>`;
+      row.appendChild(links);
+      body.appendChild(row);
+      container.appendChild(card);
+    });
+  });
+}
+
+/* ---- 추천 코스 프리셋 ---- */
+const PRESETS = [
+  { id:"food", name:"🍜 먹부림 테마", desc:"맛집·시장 몰빵",
+    ord: {
+      1: ["geumhak","paran","gilgamja","gamjacheonguk","insalt","wingwing"],
+      2: ["macaopark","sokchomarket","jjinppang","danchen","dongmyeong","daore"],
+      3: ["solbaram","yetcanaria"]
+    },
+    time: { geumhak:"12:30", paran:"13:30", gilgamja:"14:00", gamjacheonguk:"14:20", insalt:"15:00", wingwing:"17:30",
+      macaopark:"10:30", sokchomarket:"11:00", jjinppang:"11:40", danchen:"12:10", dongmyeong:"14:00", daore:"15:30",
+      solbaram:"11:10", yetcanaria:"12:40" } },
+  { id:"shop", name:"🛍 소품샵 테마", desc:"소품샵·공간 위주",
+    ord: {
+      1: ["solol","hunky","sayou","lebonmagel","redhammer","yoonsul"],
+      2: ["walnut","asianhw","zoging","okran","daore","mogring","shltr","sokchomarket"],
+      3: ["susuha","pulnori"]
+    },
+    time: { solol:"13:00", hunky:"14:20", sayou:"15:20", lebonmagel:"15:50", redhammer:"16:40", yoonsul:"17:30",
+      walnut:"11:00", asianhw:"11:30", zoging:"12:00", okran:"12:30", daore:"13:00", mogring:"13:30", shltr:"14:30", sokchomarket:"15:30",
+      susuha:"11:30", pulnori:"12:00" } },
+  { id:"mix", name:"⚖️ 균형 테마", desc:"먹방+소품+전시 믹스",
+    ord: {
+      1: ["geumhak","paran","gilgamja","solol","hunky","wingwing"],
+      2: ["macaopark","sokchomarket","danchen","walnut","mogring","daore","shltr"],
+      3: ["solbaram","pulnori","yetcanaria"]
+    },
+    time: { geumhak:"12:30", paran:"13:30", gilgamja:"14:00", solol:"15:00", hunky:"16:30", wingwing:"18:00",
+      macaopark:"10:30", sokchomarket:"11:00", danchen:"12:00", walnut:"13:30", mogring:"14:00", daore:"14:40", shltr:"15:30",
+      solbaram:"11:10", pulnori:"12:10", yetcanaria:"13:00" } }
+];
+const presetsEl = document.getElementById("presets");
+PRESETS.forEach(ps => {
+  const b = document.createElement("button");
+  b.className = "map-tab";
+  b.innerHTML = `${ps.name} <span style="font-weight:400">· ${ps.desc}</span>`;
+  b.addEventListener("click", () => {
+    if (!confirm(`"${ps.name}" 코스로 현재 배치를 덮어쓸까요?`)) return;
+    S.ord = { 1: [...ps.ord[1]], 2: [...ps.ord[2]], 3: [...ps.ord[3]] };
+    S.time = { ...ps.time };
+    save(); renderAll(); showTab(1);
+    document.getElementById("days").scrollIntoView({ behavior: "smooth" });
+  });
+  presetsEl.appendChild(b);
+});
+
+/* ---- 사이트 탭 (일정 / 리스트 / 팁) ---- */
+const SITE_PAGES = [["plan","📅 일정"],["list","📋 장소 리스트"],["etc","💡 팁·기타"]];
+const siteTabsEl = document.getElementById("siteTabs");
+function showPage(k) {
+  SITE_PAGES.forEach(([p], i) => {
+    document.getElementById("page-" + p).classList.toggle("on", p === k);
+    siteTabsEl.children[i].classList.toggle("on", p === k);
+  });
+  if (k === "plan") setTimeout(() => { map.invalidateSize(); showTab(curTab); }, 30);
+  window.scrollTo({ top: 0 });
+}
+SITE_PAGES.forEach(([k, label], i) => {
+  const b = document.createElement("button");
+  b.className = "map-tab" + (i === 0 ? " on" : "");
+  b.textContent = label;
+  b.addEventListener("click", () => showPage(k));
+  siteTabsEl.appendChild(b);
+});
+
+/* ---- 모든 링크 새 탭으로 ---- */
+document.addEventListener("click", e => {
+  const a = e.target.closest("a[href]");
+  if (a) { a.target = "_blank"; a.rel = "noopener"; }
+});
+
+/* ---- 확인 필요 ---- */
+document.getElementById("pending").innerHTML = PENDING.map(t => {
+  const img = postImg(t.url);
+  return `<div class="tip" style="border-left-color:var(--warn); display:flex; gap:12px; align-items:flex-start">
+    ${img ? `<img class="thumb" src="${img}" alt="" loading="lazy" style="width:64px;height:64px;border-radius:8px;object-fit:cover;flex:none" onerror="this.remove()">` : ""}
+    <div><b>${t.t}</b>${t.d} <a href="${t.url}">영상 보기 ↗</a> <span class="src">${t.src}</span></div></div>`;
+}).join("");
+
+/* ---- 통합 렌더 ---- */
+function renderAll() {
+  renderDays();
+  renderPool();
+  showTab(curTab);
+}
+renderDays();
+renderPool();
+showTab(0);
+</script>
+</body>
+</html>
