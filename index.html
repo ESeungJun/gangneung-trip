@@ -270,7 +270,7 @@
   <div class="map-tabs" id="mapTabs"></div>
   <div id="map"></div>
   <p class="map-cap" id="mapCap"></p>
-  <p class="map-cap">전체 탭의 회색 점 = 아직 배치 안 한 후보. 장소 리스트에서 DAY 버튼으로 배치하면 색깔 핀으로 바뀌어요.</p>
+  <p class="map-cap">전체 탭의 회색 점 = 아직 배치 안 한 후보 (리스트에서 DAY 버튼으로 배치). <span style="color:#c0392b;font-weight:700">⚡빨강</span> = 테슬라 슈퍼차저, ⚡회색 = 완속.</p>
 
   <section class="base">
     <div class="label">Base Camp · 2박</div>
@@ -311,6 +311,10 @@
     <p class="map-cap">※ 이미지 판독 기준이라 일부 상호 표기가 다를 수 있어요.</p>
   </details>
 
+  <h2 class="sec">⚡ 전기차 충전 (테슬라 우선)</h2>
+  <div id="chargers"></div>
+  <p class="map-cap">그 외 일반 급속 충전소는 현장 상황이 자주 바뀌어서 테슬라 앱 / EV Infra / 티맵에서 실시간 확인을 추천해요.</p>
+
   <h2 class="sec">정보 확인 필요 (사진·영상에만 정보가 있는 링크)</h2>
   <div id="pending"></div>
   </div><!-- /page-etc -->
@@ -330,6 +334,20 @@
    area: gn(강릉) sc(속초) etc(고성·동해) / lat,lng 없으면 경로 계산에서 제외
    ================================================================ */
 const HOTEL = { name: "신라모노그램 강릉 호텔", g: "신라모노그램 강릉 호텔", lat: 37.7848, lng: 128.9252 };
+
+/* 전기차 충전소 — 1순위 테슬라 슈퍼차저, 지도에 ⚡로 항상 표시 */
+const CHARGERS = [
+  { name:"테슬라 슈퍼차저 · 강릉 세인트존스호텔", type:"슈퍼차저", lat:37.7908, lng:128.9186,
+    desc:"창해로 307 (강문해변). 호텔에서 차 7분 — 초당·강문 코스나 저녁 산책 때 충전하기 좋아요.", g:"세인트존스호텔 강릉" },
+  { name:"테슬라 슈퍼차저 · 양양", type:"슈퍼차저 V3 (250kW ×8)", lat:38.0530, lng:128.6280, approx:true,
+    desc:"양양군 손양면 동호리 510-28. 강릉↔속초 이동 딱 중간(동해고속도로) — DAY 2 오가는 길 충전 포인트.", g:"테슬라 슈퍼차저 양양" },
+  { name:"테슬라 슈퍼차저 · 속초 롯데리조트", type:"슈퍼차저 (120kW ×4)", lat:38.1745, lng:128.6034, approx:true,
+    desc:"대포항길 186, B3 주차장 · 24시간. 설악항 회센터·다오레·소품샵 골목 코스 바로 근처.", g:"롯데리조트 속초" },
+  { name:"테슬라 완속 · 씨마크호텔 (경포)", type:"데스티네이션차저", lat:37.8005, lng:128.9070, approx:true,
+    desc:"경포 방면 완속. 급할 땐 세인트존스 슈퍼차저가 나아요.", g:"씨마크호텔 강릉" },
+  { name:"테슬라 완속 · 테라로사 커피공장", type:"데스티네이션차저", lat:37.6970, lng:128.8830, approx:true,
+    desc:"구정면 본점 — 커피 마시는 동안 완속 충전.", g:"테라로사 커피공장" }
+];
 
 const PLACES = [
   /* ---- 강릉 · 맛집 ---- */
@@ -643,6 +661,14 @@ function drawMarkers(tab) {
   markerLayer.clearLayers();
   const hotelIcon = L.divIcon({ className:"pin-label", html:`<div style="background:${getCss("--ink")}">🏨</div>`, iconSize:[26,26], iconAnchor:[13,24], popupAnchor:[0,-22] });
   L.marker([HOTEL.lat, HOTEL.lng], { icon: hotelIcon }).addTo(markerLayer).bindPopup(popupHtml(HOTEL, "베이스캠프 · 2박<br>"));
+  CHARGERS.forEach(c => {
+    const isSuper = c.type.startsWith("슈퍼");
+    const icon = L.divIcon({ className:"pin-label",
+      html:`<div style="background:${isSuper ? "#c0392b" : "#8a8f98"}; width:20px; height:20px; font-size:11px; border-radius:50%">⚡</div>`,
+      iconSize:[20,20], iconAnchor:[10,10], popupAnchor:[0,-10] });
+    L.marker([c.lat, c.lng], { icon }).addTo(markerLayer)
+      .bindPopup(popupHtml(c, `${c.type}<br>${c.desc}<br>`));
+  });
   for (const d of [1,2,3]) {
     if (tab !== 0 && tab !== d) continue; // 해당 DAY 탭이면 그날 핀만
     S.ord[d].forEach((id, i) => {
@@ -973,6 +999,14 @@ document.addEventListener("click", e => {
   const a = e.target.closest("a[href]");
   if (a) { a.target = "_blank"; a.rel = "noopener"; }
 });
+
+/* ---- 충전소 리스트 ---- */
+document.getElementById("chargers").innerHTML = CHARGERS.map(c => {
+  const isSuper = c.type.startsWith("슈퍼");
+  return `<div class="tip" style="border-left-color:${isSuper ? "#c0392b" : "var(--line)"}">
+    <b>⚡ ${c.name} <span class="badge ${isSuper ? "flag" : "area-etc"}" style="vertical-align:1px">${c.type}</span></b>
+    ${c.desc} <a href="https://www.google.com/maps/search/?api=1&query=${enc(c.g)}">구글 지도 ↗</a> · <a href="https://map.naver.com/p/search/${enc(c.g)}">네이버 ↗</a></div>`;
+}).join("");
 
 /* ---- 확인 필요 ---- */
 document.getElementById("pending").innerHTML = PENDING.map(t => {
