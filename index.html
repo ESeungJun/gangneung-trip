@@ -123,6 +123,22 @@
   .map-btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); }
   .map-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  /* ---------- share ---------- */
+  .share-bar {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    margin: -4px 0 14px;
+  }
+  .share-bar .map-cap { margin: 0; flex: 1 1 200px; }
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 16px);
+    background: var(--ink); color: var(--bg);
+    font-size: 13px; font-weight: 600; padding: 10px 16px; border-radius: 999px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.18);
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+    max-width: calc(100vw - 32px); text-align: center; z-index: 9999;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
   /* ---------- day sections ---------- */
   .day { margin-bottom: 32px; }
   .day-head {
@@ -287,6 +303,10 @@
   <div class="map-tabs" id="presets"></div>
 
   <h2 class="sec">일정 · 순서와 시간은 자유롭게</h2>
+  <div class="share-bar">
+    <button class="map-btn" id="shareBtn" type="button">🔗 일정 공유 링크</button>
+    <p class="map-cap">지금 배치·시간이 링크에 담겨요. 받은 사람은 이 화면 그대로 열립니다. 수정했다면 다시 공유해 주세요.</p>
+  </div>
   <div id="days"></div>
   </div><!-- /page-plan -->
 
@@ -632,6 +652,72 @@ try {
 } catch (e) {}
 function save() { localStorage.setItem(LS_KEY, JSON.stringify(S)); }
 function dayOf(id) { for (const d of [1,2,3]) if (S.ord[d].includes(id)) return d; return 0; }
+
+/* ---- 토스트 ---- */
+let toastTimer = null;
+function toast(msg) {
+  let el = document.getElementById("toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "toast"; el.className = "toast"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite");
+    document.body.appendChild(el);
+  }
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+/* ---- 공유 링크 (#s=day1;day2;day3, 항목은 id@HHMM 를 쉼표로) ---- */
+function encodeState(s) {
+  return [1,2,3].map(d => (s.ord[d] || []).map(id => {
+    const t = (s.time[id] || "").replace(":", "");
+    return /^\d{4}$/.test(t) ? id + "@" + t : id;
+  }).join(",")).join(";");
+}
+function decodeState(str) {
+  const days = String(str || "").split(";");
+  if (days.length !== 3) return null;
+  const out = { ord: { 1:[], 2:[], 3:[] }, time: {} };
+  let n = 0;
+  days.forEach((seg, i) => {
+    if (!seg) return;
+    seg.split(",").forEach(tok => {
+      const [id, t] = tok.split("@");
+      if (!byId[id] || out.ord[i+1].includes(id)) return;
+      out.ord[i+1].push(id); n++;
+      if (t && /^\d{4}$/.test(t)) out.time[id] = t.slice(0,2) + ":" + t.slice(2);
+    });
+  });
+  return n ? out : null;
+}
+function shareUrl() { return location.href.split("#")[0] + "#s=" + encodeState(S); }
+
+let sharedLoaded = false;
+(function loadShared() {
+  const m = location.hash.match(/^#s=(.+)$/);
+  if (!m) return;
+  let shared = null;
+  try { shared = decodeState(decodeURIComponent(m[1])); } catch (e) {}
+  history.replaceState(null, "", location.pathname + location.search);
+  if (!shared) { toast("공유 링크가 올바르지 않아요"); return; }
+  const hasMine = !!localStorage.getItem(LS_KEY);
+  if (hasMine && encodeState(S) !== encodeState(shared)) {
+    if (!confirm("공유받은 일정을 불러올까요?\n지금 이 기기에 저장된 배치는 덮어써져요.")) return;
+  }
+  S = shared; save(); sharedLoaded = true;
+})();
+
+document.getElementById("shareBtn").addEventListener("click", async () => {
+  const total = [1,2,3].reduce((a, d) => a + S.ord[d].length, 0);
+  if (!total) { toast("먼저 일정에 장소를 넣어주세요"); return; }
+  const url = shareUrl();
+  if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+    try { await navigator.share({ title: document.title, url }); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(url); toast("일정 링크를 복사했어요 · 카톡 등에 붙여넣기"); }
+  catch (e) { prompt("아래 링크를 복사하세요", url); }
+});
 
 /* ---- D-day ---- */
 (function () {
@@ -1027,6 +1113,7 @@ function renderAll() {
 renderDays();
 renderPool();
 showTab(0);
+if (sharedLoaded) toast("공유받은 일정을 불러왔어요");
 </script>
 </body>
 </html>
