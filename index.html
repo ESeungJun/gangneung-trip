@@ -213,6 +213,28 @@
     display: flex; gap: 12px; align-items: flex-start;
   }
   .pcard.assigned { border-color: var(--accent); }
+  .pcard { position: relative; }
+  .pcard .pdel {
+    position: absolute; top: 6px; right: 6px;
+    width: 30px; height: 30px; border-radius: 999px;
+    border: none; background: transparent; color: var(--ink-soft);
+    font-size: 15px; line-height: 1; cursor: pointer; font-family: inherit;
+  }
+  .pcard .pdel:hover { background: var(--bg); color: var(--ink); }
+  .pcard .pdel:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .pcard h3 { padding-right: 28px; }
+  .hidden-box { margin: 18px 0 0; }
+  .hidden-box summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); font-weight: 700; }
+  .hidden-box .hrow {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--line);
+  }
+  .hidden-box .hrow .nm { flex: 1 1 160px; }
+  .hidden-box .hall { margin-top: 10px; }
+  .toast button {
+    margin-left: 10px; border: none; background: transparent; color: inherit;
+    font-family: inherit; font-size: 13px; font-weight: 800; text-decoration: underline; cursor: pointer; padding: 0;
+  }
   .pcard .thumb {
     width: 72px; height: 72px; border-radius: 9px; object-fit: cover;
     flex: none; background: var(--bg); margin-top: 2px;
@@ -645,26 +667,35 @@ const DAYS_META = [
 
 /* ---- 상태 (localStorage) ---- */
 const LS_KEY = "gn-trip-v1";
-let S = { ord: { 1:["solol"], 2:[], 3:[] }, time: {} };
+let S = { ord: { 1:["solol"], 2:[], 3:[] }, time: {}, hide: [] };
 try {
   const saved = JSON.parse(localStorage.getItem(LS_KEY));
   if (saved && saved.ord) S = saved;
 } catch (e) {}
+if (!Array.isArray(S.hide)) S.hide = [];
+const isHidden = id => S.hide.includes(id);
 function save() { localStorage.setItem(LS_KEY, JSON.stringify(S)); }
 function dayOf(id) { for (const d of [1,2,3]) if (S.ord[d].includes(id)) return d; return 0; }
 
 /* ---- 토스트 ---- */
 let toastTimer = null;
-function toast(msg) {
+function toast(msg, action) {
   let el = document.getElementById("toast");
   if (!el) {
     el = document.createElement("div");
     el.id = "toast"; el.className = "toast"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite");
     document.body.appendChild(el);
   }
-  el.textContent = msg; el.classList.add("show");
+  el.textContent = msg;
+  if (action) {
+    const b = document.createElement("button"); b.type = "button";
+    b.textContent = action.label;
+    b.addEventListener("click", () => { el.classList.remove("show"); action.fn(); });
+    el.appendChild(b);
+  }
+  el.classList.add("show"); el.style.pointerEvents = action ? "auto" : "none";
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+  toastTimer = setTimeout(() => el.classList.remove("show"), action ? 5000 : 2600);
 }
 
 /* ---- 공유 링크 (#s=day1;day2;day3, 항목은 id@HHMM 를 쉼표로) ---- */
@@ -704,7 +735,7 @@ let sharedLoaded = false;
   if (hasMine && encodeState(S) !== encodeState(shared)) {
     if (!confirm("공유받은 일정을 불러올까요?\n지금 이 기기에 저장된 배치는 덮어써져요.")) return;
   }
-  S = shared; save(); sharedLoaded = true;
+  shared.hide = S.hide; S = shared; save(); sharedLoaded = true;
 })();
 
 document.getElementById("shareBtn").addEventListener("click", async () => {
@@ -962,8 +993,9 @@ const CAT_ORDER = ["맛집", "중앙시장 먹거리", "카페·빵집", "소품
 const poolEl = document.getElementById("pool");
 function renderPool() {
   poolEl.innerHTML = "";
-  const list = PLACES.filter(p => filter === "all" || p.area === filter);
-  document.getElementById("poolCount").textContent = `${PLACES.length}곳 수집됨`;
+  const list = PLACES.filter(p => !isHidden(p.id) && (filter === "all" || p.area === filter));
+  const hiddenN = S.hide.filter(id => byId[id]).length;
+  document.getElementById("poolCount").textContent = `${PLACES.length - hiddenN}곳` + (hiddenN ? ` · 숨김 ${hiddenN}` : "");
   CAT_ORDER.forEach(cat => {
     const items = list.filter(p => p.cat === cat);
     if (!items.length) return;
@@ -988,6 +1020,11 @@ function renderPool() {
       const body = document.createElement("div");
       body.className = "pbody";
       card.innerHTML = img ? `<img class="thumb" src="${img}" alt="" loading="lazy" onerror="this.remove()">` : "";
+      const del = document.createElement("button");
+      del.className = "pdel"; del.type = "button"; del.textContent = "✕";
+      del.setAttribute("aria-label", `${p.name} 목록에서 제거`); del.title = "목록에서 제거";
+      del.addEventListener("click", () => hidePlace(p.id));
+      card.appendChild(del);
       const conflict = d && p.closed && p.closed.includes(DAY_WD[d]);
       const info = [p.hours ? "⏰ " + p.hours : null, p.close ? "🚫 " + p.close : null, p.park ? "🅿 " + p.park : null].filter(Boolean).join(" · ");
       body.innerHTML = `<h3>${p.name} <span class="badge ${AREA_BADGE[p.area]}">${AREA_LABEL[p.area]}</span>${conflict ? ` <span class="badge flag">⚠ DAY ${d}(${WD_NAME[d]}) 휴무!</span>` : ""}${p.flag ? ` <span class="badge flag">⚠ ${p.flag}</span>` : ""}</h3>
@@ -1016,6 +1053,45 @@ function renderPool() {
       container.appendChild(card);
     });
   });
+  const hiddenIds = S.hide.filter(id => byId[id]);
+  if (hiddenIds.length) {
+    const box = document.createElement("details");
+    box.className = "hidden-box";
+    box.innerHTML = `<summary>숨긴 장소 ${hiddenIds.length}곳 · 펼쳐서 되돌리기</summary>`;
+    hiddenIds.forEach(id => {
+      const p = byId[id];
+      const r = document.createElement("div");
+      r.className = "hrow";
+      r.innerHTML = `<span class="nm"><b>${p.name}</b> <span class="badge ${AREA_BADGE[p.area]}">${AREA_LABEL[p.area]}</span> <span style="color:var(--ink-soft)">· ${p.cat}</span></span>`;
+      const b = document.createElement("button");
+      b.className = "abtn"; b.textContent = "되돌리기";
+      b.addEventListener("click", () => unhidePlace(id));
+      r.appendChild(b);
+      box.appendChild(r);
+    });
+    const all = document.createElement("button");
+    all.className = "map-btn ghost hall"; all.textContent = "전부 되돌리기";
+    all.addEventListener("click", () => { S.hide = []; save(); renderAll(); toast("숨긴 장소를 모두 되돌렸어요"); });
+    box.appendChild(all);
+    poolEl.appendChild(box);
+  }
+}
+
+/* ---- 장소 숨기기 / 되돌리기 ---- */
+function hidePlace(id) {
+  const p = byId[id]; if (!p || isHidden(id)) return;
+  const prevDay = dayOf(id), prevIdx = prevDay ? S.ord[prevDay].indexOf(id) : -1;
+  for (const d of [1,2,3]) S.ord[d] = S.ord[d].filter(x => x !== id);
+  S.hide.push(id);
+  save(); renderAll();
+  toast(`"${p.name}" 목록에서 뺐어요`, { label: "되돌리기", fn: () => {
+    unhidePlace(id, prevDay, prevIdx);
+  } });
+}
+function unhidePlace(id, day, idx) {
+  S.hide = S.hide.filter(x => x !== id);
+  if (day && !dayOf(id)) S.ord[day].splice(Math.max(0, idx), 0, id);
+  save(); renderAll();
 }
 
 /* ---- 추천 코스 프리셋 ---- */
@@ -1055,7 +1131,7 @@ PRESETS.forEach(ps => {
   b.innerHTML = `${ps.name} <span style="font-weight:400">· ${ps.desc}</span>`;
   b.addEventListener("click", () => {
     if (!confirm(`"${ps.name}" 코스로 현재 배치를 덮어쓸까요?`)) return;
-    S.ord = { 1: [...ps.ord[1]], 2: [...ps.ord[2]], 3: [...ps.ord[3]] };
+    S.ord = { 1: ps.ord[1].filter(id => !isHidden(id)), 2: ps.ord[2].filter(id => !isHidden(id)), 3: ps.ord[3].filter(id => !isHidden(id)) };
     S.time = { ...ps.time };
     save(); renderAll(); showTab(1);
     document.getElementById("days").scrollIntoView({ behavior: "smooth" });
