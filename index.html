@@ -654,6 +654,67 @@ const INFO = {
   cheoksan2:  {}
 };
 const enc = encodeURIComponent;
+
+/*
+ * 네이버 지도를 앱으로 연다.
+ *
+ * https://map.naver.com/... 링크는 앱링크(안드로이드)·유니버설링크(iOS)에 기대는
+ * 방식이라 앱이 뜰 때도 있고 안 뜰 때도 있다. 카톡·인스타 같은 인앱 브라우저에서는
+ * 대개 안 먹고, 안드로이드에서는 한 번 "웹으로 열기"를 고르면 그 선택이 기억돼
+ * 그다음부터 계속 웹으로 떨어진다. 링크 주소는 처음부터 그대로였는데 어느 순간
+ * 웹만 뜨게 된 이유가 이것이다.
+ *
+ * 그래서 네이버가 공식으로 여는 주소를 직접 쓴다.
+ *   안드로이드 — intent:// 에 browser_fallback_url 을 달면 앱이 없을 때 OS가
+ *                알아서 웹으로 보낸다. 타이머도 오류창도 없다.
+ *   iOS        — nmap:// 를 찌르고, 앱이 안 열려 화면이 그대로면 웹으로 넘긴다.
+ *   그 외(PC)  — 그냥 웹.
+ *
+ * appname 은 네이버 스펙상 필수 파라미터다.
+ */
+const NAVER_WEB = "https://map.naver.com/p/search/";
+const NAVER_PKG = "com.nhn.android.nmap";
+const APPNAME = location.hostname || "gangneung-trip";
+
+function openNaverMap(query, webUrl) {
+  const ua = navigator.userAgent;
+  const q = enc(query);
+
+  if (/Android/i.test(ua)) {
+    location.href = "intent://search?query=" + q + "&appname=" + enc(APPNAME) +
+      "#Intent;scheme=nmap;package=" + NAVER_PKG +
+      ";S.browser_fallback_url=" + enc(webUrl) + ";end";
+    return;
+  }
+
+  if (/iPhone|iPad|iPod/i.test(ua)) {
+    // 앱이 열리면 이 화면은 숨겨진다. 그때는 웹으로 넘기지 않는다.
+    let done = false;
+    const cancel = () => { done = true; };
+    document.addEventListener("visibilitychange", cancel, { once: true });
+    window.addEventListener("pagehide", cancel, { once: true });
+    setTimeout(() => {
+      document.removeEventListener("visibilitychange", cancel);
+      if (!done && !document.hidden) location.href = webUrl;
+    }, 1200);
+    location.href = "nmap://search?query=" + q + "&appname=" + enc(APPNAME);
+    return;
+  }
+
+  window.open(webUrl, "_blank", "noopener");
+}
+
+/* 네이버 링크는 여러 곳에서 만들어지고 지도 팝업처럼 나중에 그려지는 것도 있다.
+   생성하는 자리마다 고치는 대신 문서에서 한 번 가로챈다. */
+document.addEventListener("click", (e) => {
+  const a = e.target.closest && e.target.closest('a[href^="' + NAVER_WEB + '"]');
+  if (!a) return;
+  e.preventDefault();
+  const webUrl = a.getAttribute("href");
+  let query = webUrl.slice(NAVER_WEB.length);
+  try { query = decodeURIComponent(query); } catch (_) { /* 이미 평문 */ }
+  openNaverMap(query, webUrl);
+});
 const byId = {}; PLACES.forEach(p => { Object.assign(p, INFO[p.id] || {}); byId[p.id] = p; });
 const DAY_WD = { 1: 6, 2: 0, 3: 1 }; // 토, 일, 월
 const WD_NAME = { 1: "토", 2: "일", 3: "월" };
