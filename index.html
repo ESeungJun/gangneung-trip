@@ -113,6 +113,10 @@
   .base h2 { margin: 0 0 2px; font-size: 18px; }
   .base p { margin: 0 0 12px; color: var(--ink-soft); font-size: 14px; }
 
+  /* 체크인·이동 같은 고정 일정 — 장소 카드와 같은 줄에 서되 조용하게 */
+  .daycard.fixedcard { padding: 9px 12px; background: transparent; border-style: dashed; }
+  .fixedcard .num.fixednum { background: var(--line); color: var(--ink-soft); }
+  .fixedcard .fixedname { font-size: 13.5px; color: var(--ink-soft); font-weight: 600; }
   .map-btns { display: flex; gap: 8px; flex-wrap: wrap; }
   .map-btn {
     display: inline-block; text-decoration: none;
@@ -726,10 +730,32 @@ function getCss(v) { return getComputedStyle(document.documentElement).getProper
 const DAY_COLORS = { 1: getCss("--d1"), 2: getCss("--d2"), 3: getCss("--d3") };
 
 const DAYS_META = [
-  { d:1, date:"9. 19 토요일", sub:"서울 → 강릉", pre:"서울 출발 → 강릉", post:"15:00~ 호텔 체크인 · 송정해변 산책" },
-  { d:2, date:"9. 20 일요일", sub:"속초 당일치기", pre:"오전 호텔 출발 → 속초 (차 약 1시간)", post:"저녁 강릉 복귀" },
-  { d:3, date:"9. 21 월요일", sub:"강릉 → 서울", pre:"~11:00 체크아웃", post:"서울 도착" }
+  { d:1, date:"9. 19 토요일", sub:"서울 → 강릉" },
+  { d:2, date:"9. 20 일요일", sub:"속초 당일치기" },
+  { d:3, date:"9. 21 월요일", sub:"강릉 → 서울" }
 ];
+
+/*
+ * 체크인·출발 같은 고정 일정.
+ *
+ * 전에는 날짜 칸 위아래에 글자로만 박혀 있어서 순서를 못 바꾸고 시간도 못 넣었다.
+ * 실제로는 이것도 일정이라 다른 장소와 같은 줄에 서야 한다 — 장소 목록과 같은
+ * 배열(S.ord)에 넣고, 지도에 찍을 좌표만 없는 항목으로 다룬다.
+ * 좌표를 보는 코드(경로·핀·가까운 순 정렬)는 원래 byId 에 없는 id 를 걸러내므로
+ * 그대로 두면 알아서 빠진다.
+ */
+const FIXED = [
+  { id:"fx1a", d:1, name:"서울 출발 → 강릉", t:"" },
+  { id:"fx1b", d:1, name:"호텔 체크인 · 송정해변 산책", t:"15:00" },
+  { id:"fx2a", d:2, name:"호텔 출발 → 속초 (차 약 1시간)", t:"" },
+  { id:"fx2b", d:2, name:"강릉 복귀", t:"" },
+  { id:"fx3a", d:3, name:"체크아웃", t:"11:00" },
+  { id:"fx3b", d:3, name:"서울 도착", t:"" }
+];
+const fixedById = {}; FIXED.forEach(f => { fixedById[f.id] = f; });
+const isFixed = id => !!fixedById[id];
+/** 장소든 고정 일정이든 이름을 준다 */
+const nameOf = id => (byId[id] || fixedById[id] || {}).name || id;
 
 /* ---- 상태 (localStorage) ---- */
 const LS_KEY = "gn-trip-v1";
@@ -739,6 +765,15 @@ try {
   if (saved && saved.ord) S = saved;
 } catch (e) {}
 if (!Array.isArray(S.hide)) S.hide = [];
+/* 예전에 저장한 일정에는 고정 항목이 없다. 없으면 제자리에 끼워 넣는다 —
+   출발류는 맨 앞, 도착류는 맨 뒤. 시간은 기본값이 있으면 그것으로 시작한다. */
+FIXED.forEach(f => {
+  if ([1,2,3].some(d => (S.ord[d] || []).includes(f.id))) return;
+  S.ord[f.d] = S.ord[f.d] || [];
+  if (f.id.endsWith("a")) S.ord[f.d].unshift(f.id);
+  else S.ord[f.d].push(f.id);
+  if (f.t && !S.time[f.id]) S.time[f.id] = f.t;
+});
 const isHidden = id => S.hide.includes(id);
 function save() { localStorage.setItem(LS_KEY, JSON.stringify(S)); }
 function dayOf(id) { for (const d of [1,2,3]) if (S.ord[d].includes(id)) return d; return 0; }
@@ -780,7 +815,7 @@ function decodeState(str) {
     if (!seg) return;
     seg.split(",").forEach(tok => {
       const [id, t] = tok.split("@");
-      if (!byId[id] || out.ord[i+1].includes(id)) return;
+      if ((!byId[id] && !fixedById[id]) || out.ord[i+1].includes(id)) return;
       out.ord[i+1].push(id); n++;
       if (t && /^\d{4}$/.test(t)) out.time[id] = t.slice(0,2) + ":" + t.slice(2);
     });
@@ -805,7 +840,7 @@ let sharedLoaded = false;
 })();
 
 document.getElementById("shareBtn").addEventListener("click", async () => {
-  const total = [1,2,3].reduce((a, d) => a + S.ord[d].length, 0);
+  const total = [1,2,3].reduce((a, d) => a + S.ord[d].filter(id => byId[id]).length, 0);
   if (!total) { toast("먼저 일정에 장소를 넣어주세요"); return; }
   const url = shareUrl();
   if (navigator.share && matchMedia("(pointer: coarse)").matches) {
@@ -856,12 +891,15 @@ function drawMarkers(tab) {
   });
   for (const d of [1,2,3]) {
     if (tab !== 0 && tab !== d) continue; // 해당 DAY 탭이면 그날 핀만
-    S.ord[d].forEach((id, i) => {
+    let nth = 0;
+    S.ord[d].forEach(id => {
       const p = byId[id];
-      if (!p || p.lat == null) return;
-      const icon = L.divIcon({ className:"pin-label", html:`<div style="background:${DAY_COLORS[d]}">${i+1}</div>`, iconSize:[26,26], iconAnchor:[13,24], popupAnchor:[0,-22] });
+      if (!p) return;
+      nth++;
+      if (p.lat == null) return;
+      const icon = L.divIcon({ className:"pin-label", html:`<div style="background:${DAY_COLORS[d]}">${nth}</div>`, iconSize:[26,26], iconAnchor:[13,24], popupAnchor:[0,-22] });
       L.marker([p.lat, p.lng], { icon }).addTo(markerLayer)
-        .bindPopup(popupHtml(p, `DAY ${d} · ${i+1}번째${p.approx ? " · <small>위치 근사치</small>" : ""}<br>`));
+        .bindPopup(popupHtml(p, `DAY ${d} · ${nth}번째${p.approx ? " · <small>위치 근사치</small>" : ""}<br>`));
     });
   }
   if (tab === 0) PLACES.forEach(p => {
@@ -943,7 +981,6 @@ function optimizeDay(d) {
   const ids = S.ord[d].filter(id => byId[id] && byId[id].lat != null);
   const noPos = S.ord[d].filter(id => !ids.includes(id));
   if (ids.length < 2) return;
-  const slotTimes = S.ord[d].map(id => S.time[id]); // 시간표는 자리에 유지
   let cur = [HOTEL.lat, HOTEL.lng];
   const rest = [...ids], order = [];
   while (rest.length) {
@@ -953,10 +990,73 @@ function optimizeDay(d) {
     cur = [byId[next].lat, byId[next].lng];
   }
   if (d === 1) order.reverse(); // DAY 1은 호텔에서 끝나는 동선
-  S.ord[d] = [...order, ...noPos];
-  S.ord[d].forEach((id, i) => { S.time[id] = slotTimes[i]; });
+  // 고정 일정은 동선과 무관하다. 앞뒤 자리를 지킨다
+  const head = noPos.filter(id => fixedById[id] && id.endsWith("a"));
+  const tail = noPos.filter(id => fixedById[id] && id.endsWith("b"));
+  const others = noPos.filter(id => !fixedById[id]);
+  S.ord[d] = [...head, ...order, ...others, ...tail];
   save(); renderAll();
 }
+/**
+ * 시간을 넣으면 그 날 일정을 시간순으로 다시 세운다.
+ *
+ * 시간이 없는 항목은 서로의 순서를 지킨 채 뒤로 간다 — 시간을 위에서부터
+ * 채워 나가는 흐름과 맞다. 정렬은 **시간을 바꿨을 때만** 돈다. 위아래 버튼으로
+ * 옮긴 것을 곧바로 되돌려 버리면 손으로 못 고치는 목록이 된다.
+ */
+const minsOf = id => {
+  const m = (S.time[id] || "").match(/^(\d{1,2}):(\d{2})$/);
+  return m ? +m[1] * 60 + +m[2] : null;
+};
+function sortDayByTime(d) {
+  const withIdx = S.ord[d].map((id, i) => ({ id, i, t: minsOf(id) }));
+  withIdx.sort((a, b) => {
+    if (a.t == null && b.t == null) return a.i - b.i;
+    if (a.t == null) return 1;
+    if (b.t == null) return -1;
+    return a.t - b.t || a.i - b.i;
+  });
+  S.ord[d] = withIdx.map(x => x.id);
+}
+
+/** 순서 바꾸기. 시간은 항목에 붙어 있으므로 따로 손대지 않는다 */
+function moveItem(d, from, to) {
+  if (to < 0 || to >= S.ord[d].length) return;
+  const [x] = S.ord[d].splice(from, 1);
+  S.ord[d].splice(to, 0, x);
+  save(); renderAll();
+}
+
+/** 시간을 넣으면 그 값만 바뀌는 게 아니라 그 날 순서가 다시 선다 */
+function setTime(d, id, value) {
+  S.time[id] = value;
+  const before = S.ord[d].join();
+  sortDayByTime(d);
+  save(); renderAll();
+  if (S.ord[d].join() !== before) toast("시간 순서대로 다시 정렬했어요");
+}
+
+/** 체크인·이동처럼 좌표가 없는 일정. 시간과 순서는 장소와 똑같이 다룬다 */
+function fixedRow(d, id, i) {
+  const li = document.createElement("li");
+  li.className = "daycard fixedcard";
+  li.innerHTML = `
+    <div class="stop-head">
+      <span class="num fixednum">·</span>
+      <input class="t" type="time">
+      <span class="fixedname">${nameOf(id)}</span>
+      <span style="flex:1"></span>
+      <button class="icon-btn up" aria-label="위로">↑</button>
+      <button class="icon-btn down" aria-label="아래로">↓</button>
+    </div>`;
+  const t = li.querySelector("input.t");
+  t.value = (S.time[id] || "").match(/^\d{2}:\d{2}$/) ? S.time[id] : "";
+  t.addEventListener("change", () => setTime(d, id, t.value));
+  li.querySelector(".up").addEventListener("click", () => moveItem(d, i, i - 1));
+  li.querySelector(".down").addEventListener("click", () => moveItem(d, i, i + 1));
+  return li;
+}
+
 const daysEl = document.getElementById("days");
 function renderDays() {
   daysEl.innerHTML = "";
@@ -976,15 +1076,17 @@ function renderDays() {
     sec.appendChild(head);
     const ul = document.createElement("ul");
     ul.className = "stops";
-    ul.innerHTML = `<li class="stoprow fixed"><span class="num" style="background:var(--line)">·</span><span class="nm">${m.pre}</span></li>`;
     if (!S.ord[d].length) {
       const li = document.createElement("li");
       li.className = "day-empty";
       li.textContent = "아래 장소 리스트에서 DAY " + d + " 버튼을 눌러 배치하세요.";
       ul.appendChild(li);
     }
+    let nth = 0; // 지도 핀 번호와 맞춰야 하므로 장소만 센다
     S.ord[d].forEach((id, i) => {
+      if (fixedById[id]) { ul.appendChild(fixedRow(d, id, i)); return; }
       const p = byId[id]; if (!p) return;
+      nth++;
       const li = document.createElement("li");
       li.className = "daycard";
       li.style.borderLeft = `4px solid ${DAY_COLORS[d]}`;
@@ -994,7 +1096,7 @@ function renderDays() {
       const info = [p.hours ? "⏰ " + p.hours : null, p.close ? "🚫 " + p.close : null, p.park ? "🅿 " + p.park : null].filter(Boolean).join(" · ");
       li.innerHTML = `
         <div class="stop-head">
-          <span class="num" style="background:${DAY_COLORS[d]}">${i+1}</span>
+          <span class="num" style="background:${DAY_COLORS[d]}">${nth}</span>
           <input class="t" type="time">
           <span style="flex:1"></span>
           <button class="icon-btn up" aria-label="위로">↑</button>
@@ -1017,22 +1119,13 @@ function renderDays() {
       const t = li.querySelector("input.t");
       const tv = (S.time[id] || "").match(/\d{1,2}:\d{2}/);
       t.value = tv ? tv[0].padStart(5, "0") : "";
-      t.addEventListener("change", () => { S.time[id] = t.value; save(); });
-      const swap = (j) => { // 순서 교환 시 시간은 자리에 남도록 서로 맞교환
-        const a = S.ord[d][j], b = S.ord[d][i];
-        [S.ord[d][j], S.ord[d][i]] = [b, a];
-        [S.time[a], S.time[b]] = [S.time[b], S.time[a]];
-        save(); renderAll();
-      };
+      t.addEventListener("change", () => setTime(d, id, t.value));
+      const swap = (j) => moveItem(d, i, j);
       li.querySelector(".up").addEventListener("click", () => { if (i > 0) swap(i - 1); });
       li.querySelector(".down").addEventListener("click", () => { if (i < S.ord[d].length - 1) swap(i + 1); });
       li.querySelector(".del").addEventListener("click", () => { S.ord[d] = S.ord[d].filter(x => x !== id); save(); renderAll(); });
       ul.appendChild(li);
     });
-    const post = document.createElement("li");
-    post.className = "stoprow fixed";
-    post.innerHTML = `<span class="num" style="background:var(--line)">·</span><span class="nm">${m.post}</span>`;
-    ul.appendChild(post);
     sec.appendChild(ul);
     daysEl.appendChild(sec);
   });
